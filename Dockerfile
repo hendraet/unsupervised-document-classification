@@ -3,5 +3,5 @@ COPY . /scan
 WORKDIR /scan
 RUN apt-get update
 RUN apt-get install ffmpeg libsm6 libxext6  -y
-RUN ["pip", "install", "-r", "./docs/requirements.txt"]
+RUN ["pip", "install", "-r", "./requirements.txt"]
 ENTRYPOINT ["python", "simclr.py", "--config_env", "--config_env", "configs/env.yml", "--config_exp", "configs/pretext/simclr_cifar10.yml"]
