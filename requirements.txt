@@ -2,7 +2,6 @@ easydict==1.9
 joblib==1.0.1
 numpy==1.20.2
 Pillow==8.1.2
-PyYAML==5.4.1
 scikit-learn==0.24.1
 scipy==1.6.2
 termcolor==1.1.0
