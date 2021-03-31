@@ -52,17 +52,17 @@ def get_model(p, pretrain_path=None):
             from models.resnet_stl import resnet18
             backbone = resnet18()
 
-        elif p['train_db_name'] == 'impact_kb':
-            from models.resnet_stl import resnet18
-            backbone = resnet18()
-        
         else:
             raise NotImplementedError
 
     elif p['backbone'] == 'resnet50':
         if 'imagenet' in p['train_db_name']:
             from models.resnet import resnet50
-            backbone = resnet50()  
+            backbone = resnet50()
+
+        elif p['train_db_name'] == 'impact_kb':
+            from models.resnet import resnet50
+            backbone = resnet50()
 
         else:
             raise NotImplementedError 
