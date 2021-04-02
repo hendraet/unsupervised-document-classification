@@ -5,13 +5,14 @@ Licensed under the CC BY-NC 4.0 license (https://creativecommons.org/licenses/by
 import argparse
 import os
 import torch
+from torch.utils.tensorboard import SummaryWriter
 
 from utils.config import create_config
-from utils.common_config import get_train_dataset, get_train_transformations,\
-                                get_val_dataset, get_val_transformations,\
-                                get_train_dataloader, get_val_dataloader,\
-                                get_optimizer, get_model, adjust_learning_rate,\
-                                get_criterion
+from utils.common_config import get_train_dataset, get_train_transformations, \
+    get_val_dataset, get_val_transformations, \
+    get_train_dataloader, get_val_dataloader, \
+    get_optimizer, get_model, adjust_learning_rate, \
+    get_criterion
 from utils.ema import EMA
 from utils.evaluate_utils import get_predictions, hungarian_evaluate
 from utils.train_utils import selflabel_train
@@ -19,16 +20,19 @@ from termcolor import colored
 
 # Parser
 parser = argparse.ArgumentParser(description='Self-labeling')
-parser.add_argument('--config_env',
-                    help='Config file for the environment')
-parser.add_argument('--config_exp',
-                    help='Config file for the experiment')
+parser.add_argument('--config_env', help='Config file for the environment')
+parser.add_argument('--config_exp', help='Config file for the experiment')
+parser.add_argument('--tb_run', help='Tensorboard log directory')
 args = parser.parse_args()
+
 
 def main():
     # Retrieve config file
-    p = create_config(args.config_env, args.config_exp)
+    p = create_config(args.config_env, args.config_exp, args.tb_run)
     print(colored(p, 'red'))
+
+    # Tensorboard writer
+    writer = SummaryWriter(log_dir=p['tb_dir'])
 
     # Get model
     print(colored('Retrieve model', 'blue'))
@@ -44,7 +48,7 @@ def main():
     print(criterion)
 
     # CUDNN
-    print(colored('Set CuDNN benchmark', 'blue')) 
+    print(colored('Set CuDNN benchmark', 'blue'))
     torch.backends.cudnn.benchmark = True
 
     # Optimizer
@@ -54,23 +58,23 @@ def main():
 
     # Dataset
     print(colored('Retrieve dataset', 'blue'))
-    
+
     # Transforms 
     strong_transforms = get_train_transformations(p)
     val_transforms = get_val_transformations(p)
     train_dataset = get_train_dataset(p, {'standard': val_transforms, 'augment': strong_transforms},
-                                        split='train', to_augmented_dataset=True) 
+                                      split='train', to_augmented_dataset=True)
     train_dataloader = get_train_dataloader(p, train_dataset)
-    val_dataset = get_val_dataset(p, val_transforms) 
+    val_dataset = get_val_dataset(p, val_transforms)
     val_dataloader = get_val_dataloader(p, val_dataset)
-    print(colored('Train samples %d - Val samples %d' %(len(train_dataset), len(val_dataset)), 'yellow'))
+    print(colored('Train samples %d - Val samples %d' % (len(train_dataset), len(val_dataset)), 'yellow'))
 
     # Checkpoint
     if os.path.exists(p['selflabel_checkpoint']):
         print(colored('Restart from checkpoint {}'.format(p['selflabel_checkpoint']), 'blue'))
         checkpoint = torch.load(p['selflabel_checkpoint'], map_location='cpu')
         model.load_state_dict(checkpoint['model'])
-        optimizer.load_state_dict(checkpoint['optimizer'])        
+        optimizer.load_state_dict(checkpoint['optimizer'])
         start_epoch = checkpoint['epoch']
 
     else:
@@ -85,10 +89,10 @@ def main():
 
     # Main loop
     print(colored('Starting main loop', 'blue'))
-    
+
     for epoch in range(start_epoch, p['epochs']):
-        print(colored('Epoch %d/%d' %(epoch+1, p['epochs']), 'yellow'))
-        print(colored('-'*10, 'yellow'))
+        print(colored('Epoch %d/%d' % (epoch + 1, p['epochs']), 'yellow'))
+        print(colored('-' * 10, 'yellow'))
 
         # Adjust lr
         lr = adjust_learning_rate(p, optimizer, epoch)
@@ -101,22 +105,23 @@ def main():
         # Evaluate (To monitor progress - Not for validation)
         print('Evaluate ...')
         predictions = get_predictions(p, val_dataloader, model)
-        clustering_stats = hungarian_evaluate(0, predictions, compute_confusion_matrix=False) 
+        clustering_stats = hungarian_evaluate(0, predictions, compute_confusion_matrix=False, epoch=epoch)
         print(clustering_stats)
-        
+
         # Checkpoint
         print('Checkpoint ...')
-        torch.save({'optimizer': optimizer.state_dict(), 'model': model.state_dict(), 
+        torch.save({'optimizer': optimizer.state_dict(), 'model': model.state_dict(),
                     'epoch': epoch + 1}, p['selflabel_checkpoint'])
         torch.save(model.module.state_dict(), p['selflabel_model'])
-    
+
     # Evaluate and save the final model
     print(colored('Evaluate model at the end', 'blue'))
     predictions = get_predictions(p, val_dataloader, model)
-    clustering_stats = hungarian_evaluate(0, predictions, 
-                                class_names=val_dataset.classes,
-                                compute_confusion_matrix=True,
-                                confusion_matrix_file=os.path.join(p['selflabel_dir'], 'confusion_matrix.png'))
+    clustering_stats = hungarian_evaluate(0, predictions,
+                                          class_names=val_dataset.classes,
+                                          compute_confusion_matrix=True,
+                                          confusion_matrix_file=os.path.join(p['selflabel_dir'],
+                                                                             'confusion_matrix.png'))
     print(clustering_stats)
     torch.save(model.module.state_dict(), p['selflabel_model'])
 

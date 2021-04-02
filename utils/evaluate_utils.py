@@ -120,9 +120,8 @@ def scan_evaluate(predictions):
 
 
 @torch.no_grad()
-def hungarian_evaluate(subhead_index, all_predictions, class_names=None, 
-                        compute_purity=True, compute_confusion_matrix=True,
-                        confusion_matrix_file=None):
+def hungarian_evaluate(subhead_index, all_predictions, class_names=None, compute_purity=True,
+                       compute_confusion_matrix=True, confusion_matrix_file=None, tf_writer=None, epoch=0):
     # Evaluate model based on hungarian matching between predicted cluster assignment and gt classes.
     # This is computed only for the passed subhead index.
 
@@ -151,10 +150,30 @@ def hungarian_evaluate(subhead_index, all_predictions, class_names=None,
     correct_top5_binary = reordered_preds_top5.eq(targets.view(-1,1).expand_as(reordered_preds_top5))
     top5 = float(correct_top5_binary.sum()) / float(num_elems)
 
-    # Compute confusion matrix
+    reordered_preds = reordered_preds.cpu().numpy()
+    targets = targets.cpu().numpy()
+
+    if tf_writer is not None:
+        from sklearn.metrics import precision_score, recall_score, f1_score
+        precision = precision_score(targets, reordered_preds, average=None, zero_division=0)
+        recall = recall_score(targets, reordered_preds, average=None, zero_division=0)
+        f1 = f1_score(targets, reordered_preds, average=None, zero_division=0)
+
+        tf_writer.add_scalar('Evaluate/ACC', acc, epoch)
+        tf_writer.add_scalar('Evaluate/NMI', nmi, epoch)
+        tf_writer.add_scalar('Evaluate/ARI', ari, epoch)
+
+        for i in range(len(f1)):
+            tf_writer.add_scalar(f'Evaluate/f1_{i}', f1[i], epoch)
+            tf_writer.add_scalar(f'Evaluate/precision_{i}', precision[i], epoch)
+            tf_writer.add_scalar(f'Evaluate/recall_{i}', recall[i], epoch)
+
+        # if epoch % cfg.embedding_freq == 0:
+        #     tf_writer.add_embedding(intermediates, labels, images, epoch, cfg.session)
+
+    # Visualize confusion matrix with matplotlib
     if compute_confusion_matrix:
-        confusion_matrix(reordered_preds.cpu().numpy(), targets.cpu().numpy(), 
-                            class_names, confusion_matrix_file)
+        confusion_matrix(reordered_preds, targets, class_names, confusion_matrix_file)
 
     return {'ACC': acc, 'ARI': ari, 'NMI': nmi, 'ACC Top-5': top5, 'hungarian_match': match}
 

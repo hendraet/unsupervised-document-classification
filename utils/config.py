@@ -7,7 +7,8 @@ import yaml
 from easydict import EasyDict
 from utils.utils import mkdir_if_missing
 
-def create_config(config_file_env, config_file_exp):
+
+def create_config(config_file_env, config_file_exp, tb_run=""):
     # Config for environment path
     with open(config_file_env, 'r') as stream:
         root_dir = yaml.safe_load(stream)['root_dir']
@@ -47,5 +48,6 @@ def create_config(config_file_env, config_file_exp):
         cfg['selflabel_dir'] = selflabel_dir
         cfg['selflabel_checkpoint'] = os.path.join(selflabel_dir, 'checkpoint.pth.tar')
         cfg['selflabel_model'] = os.path.join(selflabel_dir, 'model.pth.tar')
+        cfg['tb_dir'] = os.path.join(base_dir, tb_run)
 
     return cfg 
