@@ -124,7 +124,7 @@ def main():
 
         print('Evaluate with hungarian matching algorithm ...')
         clustering_stats = hungarian_evaluate(lowest_loss_head, predictions,
-                                              store_confusion_matrix=False, tf_writer=writer, epoch=epoch)
+                                              compute_confusion_matrix=False, tf_writer=writer, epoch=epoch)
         print(clustering_stats)
 
         # Checkpoint
