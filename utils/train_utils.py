@@ -82,7 +82,7 @@ def scan_train(train_loader, model, criterion, optimizer, epoch, writer, update_
             entropy_loss.append(entropy_loss_)
 
             num_classes = anchors_output_subhead.shape[1]
-            writer.add_scalar('Train/Loss/Head-%d' % num_classes, total_loss_[0].cpu(), epoch * len(train_loader) + i)
+            writer.add_scalar('Train/Loss/Head-%d' % num_classes, total_loss_.item(), epoch * len(train_loader) + i)
 
         # Register the mean loss and backprop the total loss to cover all subheads
         total_losses.update(np.mean([v.item() for v in total_loss]))
@@ -120,7 +120,7 @@ def selflabel_train(train_loader, model, criterion, optimizer, epoch, writer, em
         losses.update(loss.item())
 
         num_classes = output_augmented.shape[1]
-        writer.add_scalar('Train/Loss/Head-%d' % num_classes, loss[0].cpu(), epoch * len(train_loader) + i)
+        writer.add_scalar('Train/Loss/Head-%d' % num_classes, loss.item(), epoch * len(train_loader) + i)
 
         optimizer.zero_grad()
         loss.backward()
