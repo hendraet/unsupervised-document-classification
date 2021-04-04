@@ -100,7 +100,7 @@ def main():
 
         # Perform self-labeling 
         print('Train ...')
-        selflabel_train(train_dataloader, model, criterion, optimizer, epoch, ema=ema)
+        selflabel_train(train_dataloader, model, criterion, optimizer, epoch, writer, ema=ema)
 
         # Evaluate (To monitor progress - Not for validation)
         print('Evaluate ...')

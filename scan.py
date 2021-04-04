@@ -99,7 +99,7 @@ def main():
 
         # Train
         print('Train ...')
-        scan_train(train_dataloader, model, criterion, optimizer, epoch, p['update_cluster_head_only'])
+        scan_train(train_dataloader, model, criterion, optimizer, epoch, writer, p['update_cluster_head_only'])
 
         # Evaluate 
         print('Make prediction on validation set ...')
