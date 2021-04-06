@@ -20,11 +20,12 @@ parser.add_argument('--config_env',
                     help='Config file for the environment')
 parser.add_argument('--config_exp',
                     help='Config file for the experiment')
+parser.add_argument('--tb_run', help='Tensorboard log directory')
 args = parser.parse_args()
 
 def main():
     # Retrieve config file
-    p = create_config(args.config_env, args.config_exp)
+    p = create_config(args.config_env, args.config_exp, args.tb_run)
     print(colored(p, 'red'))
     
     

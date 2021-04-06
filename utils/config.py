@@ -8,7 +8,7 @@ from easydict import EasyDict
 from utils.utils import mkdir_if_missing
 
 
-def create_config(config_file_env, config_file_exp, tb_run=""):
+def create_config(config_file_env, config_file_exp, tb_run):
     # Config for environment path
     with open(config_file_env, 'r') as stream:
         root_dir = yaml.safe_load(stream)['root_dir']
