@@ -23,7 +23,7 @@ def create_config(config_file_env, config_file_exp, tb_run=""):
         cfg[k] = v
 
     # Set paths for pretext task (These directories are needed in every stage)
-    base_dir = os.path.join(root_dir, cfg['train_db_name'])
+    base_dir = os.path.join(root_dir, tb_run)
     pretext_dir = os.path.join(base_dir, 'pretext')
     mkdir_if_missing(base_dir)
     mkdir_if_missing(pretext_dir)
@@ -36,7 +36,7 @@ def create_config(config_file_env, config_file_exp, tb_run=""):
     # If we perform clustering or self-labeling step we need additional paths.
     # We also include a run identifier to support multiple runs w/ same hyperparams.
     if cfg['setup'] in ['scan', 'selflabel']:
-        base_dir = os.path.join(root_dir, cfg['train_db_name'])
+        base_dir = os.path.join(root_dir, tb_run)
         scan_dir = os.path.join(base_dir, 'scan')
         selflabel_dir = os.path.join(base_dir, 'selflabel') 
         mkdir_if_missing(base_dir)
@@ -48,6 +48,7 @@ def create_config(config_file_env, config_file_exp, tb_run=""):
         cfg['selflabel_dir'] = selflabel_dir
         cfg['selflabel_checkpoint'] = os.path.join(selflabel_dir, 'checkpoint.pth.tar')
         cfg['selflabel_model'] = os.path.join(selflabel_dir, 'model.pth.tar')
-        cfg['tb_dir'] = os.path.join(base_dir, tb_run)
+        cfg['scan_tb_dir'] = os.path.join(base_dir, 'tb_scan')
+        cfg['selflabel_tb_dir'] = os.path.join(base_dir, 'tb_selflabel')
 
     return cfg 

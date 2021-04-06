@@ -32,7 +32,7 @@ def main():
     print(colored(p, 'red'))
 
     # Tensorboard writer
-    writer = SummaryWriter(log_dir=p['tb_dir'])
+    writer = SummaryWriter(log_dir=p['selflabel_tb_dir'])
 
     # Get model
     print(colored('Retrieve model', 'blue'))

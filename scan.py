@@ -46,7 +46,7 @@ def main():
     print('Train samples %d - Val samples %d' % (len(train_dataset), len(val_dataset)))
 
     # Tensorboard writer
-    writer = SummaryWriter(log_dir=p['tb_dir'])
+    writer = SummaryWriter(log_dir=p['scan_tb_dir'])
 
     # Model
     print(colored('Get model', 'blue'))
