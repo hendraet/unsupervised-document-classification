@@ -22,6 +22,12 @@ class MyPath(object):
 
         if database == 'impact_kb':
             return './IMPACT_KB_240/'
+
+        if database == 'impact_full_balanced':
+            return './IMPACT_Full_Balanced_240/'
+
+        if database == 'impact_full_imbalanced':
+            return './IMPACT_Full_Imbalanced_240/'
         
         elif database in ['imagenet', 'imagenet_50', 'imagenet_100', 'imagenet_200']:
             return './imagenet/'

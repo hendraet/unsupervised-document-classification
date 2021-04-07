@@ -9,8 +9,9 @@ import torch
 import torchvision.transforms as transforms
 from data.augment import Augment, Cutout
 from utils.collate import collate_custom
+from utils.mypath import MyPath
 
- 
+
 def get_criterion(p):
     if p['criterion'] == 'simclr':
         from losses.losses import SimCLRLoss
@@ -60,7 +61,7 @@ def get_model(p, pretrain_path=None):
             from models.resnet import resnet50
             backbone = resnet50()
 
-        elif p['train_db_name'] == 'impact_kb':
+        elif p['train_db_name'] in ['impact_kb', 'impact_full_balanced', 'impact_full_imbalanced']:
             from models.resnet import resnet50
             backbone = resnet50()
 
@@ -136,9 +137,10 @@ def get_train_dataset(p, transform, to_augmented_dataset=False,
         from data.stl import STL10
         dataset = STL10(split=split, transform=transform, download=True)
 
-    elif p['train_db_name'] == 'impact_kb':
-        from data.impact_kb import IMPACT_KB
-        dataset = IMPACT_KB(split="train", transform=transform)
+    elif p['train_db_name'] in ['impact_kb', 'impact_full_balanced', 'impact_full_imbalanced']:
+        from data.impact import IMPACT
+        root = MyPath.db_root_dir(p['train_db_name'])
+        dataset = IMPACT(root, split="train", transform=transform)
 
     elif p['train_db_name'] == 'imagenet':
         from data.imagenet import ImageNet
@@ -179,9 +181,10 @@ def get_val_dataset(p, transform=None, to_neighbors_dataset=False):
         from data.stl import STL10
         dataset = STL10(split='test', transform=transform, download=True)
 
-    elif p['train_db_name'] == 'impact_kb':
-        from data.impact_kb import IMPACT_KB
-        dataset = IMPACT_KB(split="test", transform=transform)
+    elif p['train_db_name'] in ['impact_kb', 'impact_full_balanced', 'impact_full_imbalanced']:
+        from data.impact import IMPACT
+        root = MyPath.db_root_dir(p['train_db_name'])
+        dataset = IMPACT(root, split="test", transform=transform)
     
     elif p['val_db_name'] == 'imagenet':
         from data.imagenet import ImageNet

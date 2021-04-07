@@ -4,8 +4,8 @@ import torchvision
 from utils.mypath import MyPath
 
 
-class IMPACT_KB(torchvision.datasets.ImageFolder):
-    def __init__(self, root=MyPath.db_root_dir('impact_kb'), split="train", transform=None, target_transform=None):
+class IMPACT(torchvision.datasets.ImageFolder):
+    def __init__(self, root, split="train", transform=None, target_transform=None):
         super().__init__(os.path.join(root, split), transform, target_transform)
 
     def __getitem__(self, index):
