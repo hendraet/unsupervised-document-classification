@@ -66,7 +66,15 @@ def get_model(p, pretrain_path=None):
             backbone = resnet50()
 
         else:
-            raise NotImplementedError 
+            raise NotImplementedError
+
+    elif p['backbone'] == 'resnet34':
+        if p['train_db_name'] in ['impact_kb', 'impact_full_balanced', 'impact_full_imbalanced']:
+            from models.resnet import resnet34
+            backbone = resnet34()
+
+        else:
+            raise NotImplementedError
 
     else:
         raise ValueError('Invalid backbone {}'.format(p['backbone']))
