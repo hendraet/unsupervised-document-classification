@@ -10,7 +10,7 @@ confidence_threshold: 0.99
 # Loss
 criterion: confidence-cross-entropy
 criterion_kwargs:
-   apply_class_balancing: False
+   apply_class_balancing: True
 
 # Model
 backbone: resnet50
