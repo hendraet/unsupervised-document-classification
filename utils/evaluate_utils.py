@@ -10,7 +10,7 @@ from utils.utils import AverageMeter, confusion_matrix
 from data.custom_dataset import NeighborsDataset
 from sklearn import metrics
 from scipy.optimize import linear_sum_assignment
-from losses.losses import entropy
+from losses.losses import entropy, xentropy
 
 
 @torch.no_grad()
@@ -94,11 +94,11 @@ def scan_evaluate(predictions):
         # Neighbors and anchors
         probs = head['probabilities']
         neighbors = head['neighbors']
-        anchors = torch.arange(neighbors.size(0)).view(-1,1).expand_as(neighbors)
+        anchors = torch.arange(neighbors.size(0)).view(-1, 1).expand_as(neighbors)
 
         # Entropy loss
         entropy_loss = entropy(torch.mean(probs, dim=0), input_as_probabilities=True).item()
-        
+
         # Consistency loss       
         similarity = torch.matmul(probs, probs.t())
         neighbors = neighbors.contiguous().view(-1)
