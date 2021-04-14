@@ -117,6 +117,9 @@ class SCANLoss(nn.Module):
         self.entropy_weight = entropy_weight  # Default = 2.0
         self.target = target
 
+        if target is not None:
+            self.target = torch.FloatTensor(target).cuda()
+
     def forward(self, anchors, neighbors):
         """
         input:
