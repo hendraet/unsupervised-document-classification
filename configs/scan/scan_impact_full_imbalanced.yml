@@ -5,7 +5,7 @@ setup: scan
 criterion: scan
 criterion_kwargs:
    target: [0.72, 0.01, 0.18, 0.08, 0.01]
-   entropy_weight: 10.0
+   entropy_weight: 5.0
 
 # Weight update
 update_cluster_head_only: False # Update full network in SCAN

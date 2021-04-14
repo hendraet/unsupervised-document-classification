@@ -101,10 +101,11 @@ def xentropy(x, target, input_as_probabilities):
     x_ = torch.clamp(x, min=EPS)
     b = target * torch.log(x_)
 
+    # We want to minimize this not maximize it, hence the sign
     if len(b.size()) == 2:  # Sample-wise entropy
-        return -b.sum(dim=1).mean()
+        return b.sum(dim=1).mean()
     elif len(b.size()) == 1:  # Distribution-wise entropy
-        return - b.sum()
+        return b.sum()
     else:
         raise ValueError('Input tensor is %d-Dimensional' % (len(b.size())))
 
