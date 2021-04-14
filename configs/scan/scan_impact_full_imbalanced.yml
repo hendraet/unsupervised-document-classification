@@ -4,7 +4,7 @@ setup: scan
 # Loss
 criterion: scan
 criterion_kwargs:
-   target: (0.72, 0.01, 0.18, 0.08, 0.01)
+   target: [0.72, 0.01, 0.18, 0.08, 0.01]
    entropy_weight: 5.0
 
 # Weight update
