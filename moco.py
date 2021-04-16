@@ -77,7 +77,8 @@ def main():
             new_state_dict[new_k] = state_dict[k]
 
         else:
-            raise ValueError('Unexpected key {}'.format(k))
+            pass  # just silently discard unexpected keys
+            # raise ValueError('Unexpected key {}'.format(k))
 
     model.load_state_dict(new_state_dict)
 
