@@ -87,10 +87,10 @@ def main():
     if os.path.exists(p['pretext_checkpoint']):
         print(colored('Restart from checkpoint {}'.format(p['pretext_checkpoint']), 'blue'))
         checkpoint = torch.load(p['pretext_checkpoint'], map_location='cpu')
-        # optimizer.load_state_dict(checkpoint['optimizer'])
-        model.load_state_dict(checkpoint)
+        optimizer.load_state_dict(checkpoint['optimizer'])
+        model.load_state_dict(checkpoint['model'])
         model.cuda()
-        start_epoch = p['epochs']  # checkpoint['epoch']
+        start_epoch = checkpoint['epoch']
 
     else:
         print(colored('No checkpoint file at {}'.format(p['pretext_checkpoint']), 'blue'))
