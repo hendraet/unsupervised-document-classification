@@ -51,7 +51,7 @@ optimizer_kwargs:
    weight_decay: 0.0000
    nesterov: False
    momentum: 0.9
-epochs: 100
+epochs: 250
 batch_size: 512
 num_workers: 12
 
