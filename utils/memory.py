@@ -64,6 +64,27 @@ class MemoryBank(object):
         else:
             return indices
 
+    def mine_furthest_neighbors(self, topk, calculate_accuracy=True):
+        # mine the topk furthest neighbors for every sample
+        from mlpack import kfn
+
+        features = self.features.cpu().numpy()
+
+        output = kfn(k=topk, reference=features)
+        distances = output['distances']
+        indices = output['neighbors']
+
+        # evaluate
+        if calculate_accuracy:
+            targets = self.targets.cpu().numpy()
+            neighbor_targets = np.take(targets, indices[:, ], axis=0)  # Exclude sample itself for eval
+            anchor_targets = np.repeat(targets.reshape(-1, 1), topk, axis=1)
+            accuracy = np.mean(neighbor_targets != anchor_targets)
+            return indices, accuracy
+
+        else:
+            return indices
+
     def reset(self):
         self.ptr = 0 
         

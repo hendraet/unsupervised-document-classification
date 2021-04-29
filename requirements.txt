@@ -10,4 +10,5 @@ typing-extensions==3.7.4.3
 faiss-gpu==1.7.0
 matplotlib==3.4.1
 tensorboard==2.4.1
+mlpack==3.4.2
 
