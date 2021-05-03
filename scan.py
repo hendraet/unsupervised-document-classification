@@ -36,9 +36,10 @@ def main():
     print(colored('Get dataset and dataloaders', 'blue'))
     train_transformations = get_train_transformations(p)
     val_transformations = get_val_transformations(p)
-    train_dataset = get_train_dataset(p, train_transformations,
-                                      split='train', to_neighbors_dataset=True)
-    val_dataset = get_val_dataset(p, val_transformations, to_neighbors_dataset=True)
+    train_dataset = get_train_dataset(p, train_transformations, split='train',
+                                      to_neighbors_dataset=True, to_dual_neighbors_dataset=p['dual_neighbors'])
+    val_dataset = get_val_dataset(p, val_transformations, to_neighbors_dataset=True,
+                                  to_dual_neighbors_dataset=p['dual_neighbors'])
     train_dataloader = get_train_dataloader(p, train_dataset)
     val_dataloader = get_val_dataloader(p, val_dataset)
     print('Train transforms:', train_transformations)
@@ -106,7 +107,7 @@ def main():
         predictions = get_predictions(p, val_dataloader, model)
 
         print('Evaluate based on SCAN loss ...')
-        scan_stats = scan_evaluate(predictions)
+        scan_stats = scan_evaluate(predictions, criterion)
         print(scan_stats)
         lowest_loss_head = scan_stats['lowest_loss_head']
         lowest_loss = scan_stats['lowest_loss']
