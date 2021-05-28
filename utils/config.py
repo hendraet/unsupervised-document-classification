@@ -17,8 +17,7 @@ def create_config(config_file_env, config_file_exp, tb_run):
         config = yaml.safe_load(stream)
     
     cfg = EasyDict()
-    cfg['dual_neighbors'] = False  # To keep compatibility to existing configs
-
+   
     # Copy
     for k, v in config.items():
         cfg[k] = v

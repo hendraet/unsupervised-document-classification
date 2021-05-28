@@ -58,35 +58,30 @@ def scan_train(train_loader, model, criterion, optimizer, epoch, writer, update_
 
     for i, batch in enumerate(train_loader):
         # Forward pass
-        if 'furthest_neighbor' in batch:
-            anchors = batch['anchor'].cuda(non_blocking=True)
-            neighbors = batch['neighbor'].cuda(non_blocking=True)
-            furthest_neighbors = batch['furthest_neighbor'].cuda(non_blocking=True)
-
-            model_input = anchors, neighbors, furthest_neighbors
-        else:
-            anchors = batch['anchor'].cuda(non_blocking=True)
-            neighbors = batch['neighbor'].cuda(non_blocking=True)
-
-            model_input = anchors, neighbors
+        anchors = batch['anchor'].cuda(non_blocking=True)
+        neighbors = batch['neighbor'].cuda(non_blocking=True)
 
         if update_cluster_head_only:  # Only calculate gradient for backprop of linear layer
             with torch.no_grad():
-                features = [model(images, forward_pass='backbone') for images in model_input]
-            output = [model(image_features, forward_pass='head') for image_features in features]
+                anchors_features = model(anchors, forward_pass='backbone')
+                neighbors_features = model(neighbors, forward_pass='backbone')
+            anchors_output = model(anchors_features, forward_pass='head')
+            neighbors_output = model(neighbors_features, forward_pass='head')
 
         else:  # Calculate gradient for backprop of complete network
-            output = [model(images) for images in model_input]
+            anchors_output = model(anchors)
+            neighbors_output = model(neighbors)
 
             # Loss for every head
         total_loss, consistency_loss, entropy_loss = [], [], []
-        for output_subhead in zip(*output):
-            total_loss_, consistency_loss_, entropy_loss_ = criterion(*output_subhead)
+        for anchors_output_subhead, neighbors_output_subhead in zip(anchors_output, neighbors_output):
+            total_loss_, consistency_loss_, entropy_loss_ = criterion(anchors_output_subhead,
+                                                                      neighbors_output_subhead)
             total_loss.append(total_loss_)
             consistency_loss.append(consistency_loss_)
             entropy_loss.append(entropy_loss_)
 
-            num_classes = output_subhead[0].shape[1]
+            num_classes = anchors_output_subhead.shape[1]
             writer.add_scalar('Train/Loss/Head-%d' % num_classes, total_loss_.item(), epoch * len(train_loader) + i)
 
         # Register the mean loss and backprop the total loss to cover all subheads

@@ -87,7 +87,7 @@ def get_model(p, pretrain_path=None):
     elif p['setup'] in ['scan', 'selflabel']:
         from models.models import ClusteringModel
         if p['setup'] == 'selflabel':
-            assert (p['num_heads'] == 1)
+            assert(p['num_heads'] == 1)
         model = ClusteringModel(backbone, p['num_classes'], p['num_heads'])
 
     else:
@@ -96,21 +96,21 @@ def get_model(p, pretrain_path=None):
     # Load pretrained weights
     if pretrain_path is not None and os.path.exists(pretrain_path):
         state = torch.load(pretrain_path, map_location='cpu')
-
-        if p['setup'] == 'scan':  # Weights are supposed to be transfered from contrastive training
+        
+        if p['setup'] == 'scan': # Weights are supposed to be transfered from contrastive training
             missing = model.load_state_dict(state, strict=False)
-            assert (set(missing[1]) == {
-                'contrastive_head.0.weight', 'contrastive_head.0.bias',
+            assert(set(missing[1]) == {
+                'contrastive_head.0.weight', 'contrastive_head.0.bias', 
                 'contrastive_head.2.weight', 'contrastive_head.2.bias'}
-                    or set(missing[1]) == {
-                        'contrastive_head.weight', 'contrastive_head.bias'})
+                or set(missing[1]) == {
+                'contrastive_head.weight', 'contrastive_head.bias'})
 
-        elif p['setup'] == 'selflabel':  # Weights are supposed to be transfered from scan
+        elif p['setup'] == 'selflabel': # Weights are supposed to be transfered from scan 
             # We only continue with the best head (pop all heads first, then copy back the best head)
             model_state = state['model']
             all_heads = [k for k in model_state.keys() if 'cluster_head' in k]
-            best_head_weight = model_state['cluster_head.%d.weight' % (state['head'])]
-            best_head_bias = model_state['cluster_head.%d.bias' % (state['head'])]
+            best_head_weight = model_state['cluster_head.%d.weight' %(state['head'])]
+            best_head_bias = model_state['cluster_head.%d.bias' %(state['head'])]
             for k in all_heads:
                 model_state.pop(k)
 
@@ -130,8 +130,8 @@ def get_model(p, pretrain_path=None):
     return model
 
 
-def get_train_dataset(p, transform, to_augmented_dataset=False, to_neighbors_dataset=False,
-                      to_dual_neighbors_dataset=False, split=None):
+def get_train_dataset(p, transform, to_augmented_dataset=False,
+                        to_neighbors_dataset=False, split=None):
     # Base dataset
     if p['train_db_name'] == 'cifar-10':
         from data.cifar import CIFAR10
@@ -156,36 +156,31 @@ def get_train_dataset(p, transform, to_augmented_dataset=False, to_neighbors_dat
 
     elif p['train_db_name'] in ['imagenet_50', 'imagenet_100', 'imagenet_200']:
         from data.imagenet import ImageNetSubset
-        subset_file = './data/imagenet_subsets/%s.txt' % (p['train_db_name'])
+        subset_file = './data/imagenet_subsets/%s.txt' %(p['train_db_name'])
         dataset = ImageNetSubset(subset_file=subset_file, split='train', transform=transform)
 
     else:
         raise ValueError('Invalid train dataset {}'.format(p['train_db_name']))
-
+    
     # Wrap into other dataset (__getitem__ changes)
-    if to_augmented_dataset:  # Dataset returns an image and an augmentation of that image.
+    if to_augmented_dataset: # Dataset returns an image and an augmentation of that image.
         from data.custom_dataset import AugmentedDataset
         dataset = AugmentedDataset(dataset)
 
-    if to_dual_neighbors_dataset:  # Returns an image, one of its nearest neighbors and one of its furthest neighbors.
-        from data.custom_dataset import DualNeighborsDataset
-        knn_indices = np.load(p['topk_neighbors_train_path'])
-        kfn_indices = np.load(p['topk_furthest_train_path'])
-        dataset = DualNeighborsDataset(dataset, knn_indices, kfn_indices, p['num_neighbors'])
-    elif to_neighbors_dataset:  # Returns an image and one of its nearest neighbors.
+    if to_neighbors_dataset: # Dataset returns an image and one of its nearest neighbors.
         from data.custom_dataset import NeighborsDataset
         indices = np.load(p['topk_neighbors_train_path'])
         dataset = NeighborsDataset(dataset, indices, p['num_neighbors'])
-
+    
     return dataset
 
 
-def get_val_dataset(p, transform=None, to_neighbors_dataset=False, to_dual_neighbors_dataset=False):
+def get_val_dataset(p, transform=None, to_neighbors_dataset=False):
     # Base dataset
     if p['val_db_name'] == 'cifar-10':
         from data.cifar import CIFAR10
         dataset = CIFAR10(train=False, transform=transform, download=True)
-
+    
     elif p['val_db_name'] == 'cifar-20':
         from data.cifar import CIFAR20
         dataset = CIFAR20(train=False, transform=transform, download=True)
@@ -198,43 +193,38 @@ def get_val_dataset(p, transform=None, to_neighbors_dataset=False, to_dual_neigh
         from data.impact import IMPACT
         root = MyPath.db_root_dir(p['train_db_name'])
         dataset = IMPACT(root, split="test", transform=transform)
-
+    
     elif p['val_db_name'] == 'imagenet':
         from data.imagenet import ImageNet
         dataset = ImageNet(split='val', transform=transform)
-
+    
     elif p['val_db_name'] in ['imagenet_50', 'imagenet_100', 'imagenet_200']:
         from data.imagenet import ImageNetSubset
-        subset_file = './data/imagenet_subsets/%s.txt' % (p['val_db_name'])
+        subset_file = './data/imagenet_subsets/%s.txt' %(p['val_db_name'])
         dataset = ImageNetSubset(subset_file=subset_file, split='val', transform=transform)
-
+    
     else:
         raise ValueError('Invalid validation dataset {}'.format(p['val_db_name']))
-
-    # Wrap into other dataset (__getitem__ changes)
-    if to_dual_neighbors_dataset:  # Returns an image, one of its nearest neighbors and one of its furthest neighbors.
-        from data.custom_dataset import DualNeighborsDataset
-        knn_indices = np.load(p['topk_neighbors_val_path'])
-        kfn_indices = np.load(p['topk_furthest_val_path'])
-        dataset = DualNeighborsDataset(dataset, knn_indices, kfn_indices, 5)
-    elif to_neighbors_dataset:  # Returns an image and one of its nearest neighbors.
+    
+    # Wrap into other dataset (__getitem__ changes) 
+    if to_neighbors_dataset: # Dataset returns an image and one of its nearest neighbors.
         from data.custom_dataset import NeighborsDataset
         indices = np.load(p['topk_neighbors_val_path'])
-        dataset = NeighborsDataset(dataset, indices, 5)
+        dataset = NeighborsDataset(dataset, indices, 5) # Only use 5
 
     return dataset
 
 
 def get_train_dataloader(p, dataset):
-    return torch.utils.data.DataLoader(dataset, num_workers=p['num_workers'],
-                                       batch_size=p['batch_size'], pin_memory=True, collate_fn=collate_custom,
-                                       drop_last=True, shuffle=True)
+    return torch.utils.data.DataLoader(dataset, num_workers=p['num_workers'], 
+            batch_size=p['batch_size'], pin_memory=True, collate_fn=collate_custom,
+            drop_last=True, shuffle=True)
 
 
 def get_val_dataloader(p, dataset):
     return torch.utils.data.DataLoader(dataset, num_workers=p['num_workers'],
-                                       batch_size=p['batch_size'], pin_memory=True, collate_fn=collate_custom,
-                                       drop_last=False, shuffle=False)
+            batch_size=p['batch_size'], pin_memory=True, collate_fn=collate_custom,
+            drop_last=False, shuffle=False)
 
 
 def get_train_transformations(p):
@@ -246,7 +236,7 @@ def get_train_transformations(p):
             transforms.ToTensor(),
             transforms.Normalize(**p['augmentation_kwargs']['normalize'])
         ])
-
+    
     elif p['augmentation_strategy'] == 'simclr':
         # Augmentation strategy from the SimCLR paper
         return transforms.Compose([
@@ -259,7 +249,7 @@ def get_train_transformations(p):
             transforms.ToTensor(),
             transforms.Normalize(**p['augmentation_kwargs']['normalize'])
         ])
-
+    
     elif p['augmentation_strategy'] == 'ours':
         # Augmentation strategy from our paper 
         return transforms.Compose([
@@ -269,40 +259,41 @@ def get_train_transformations(p):
             transforms.ToTensor(),
             transforms.Normalize(**p['augmentation_kwargs']['normalize']),
             Cutout(
-                n_holes=p['augmentation_kwargs']['cutout_kwargs']['n_holes'],
-                length=p['augmentation_kwargs']['cutout_kwargs']['length'],
-                random=p['augmentation_kwargs']['cutout_kwargs']['random'])])
-
+                n_holes = p['augmentation_kwargs']['cutout_kwargs']['n_holes'],
+                length = p['augmentation_kwargs']['cutout_kwargs']['length'],
+                random = p['augmentation_kwargs']['cutout_kwargs']['random'])])
+    
     else:
         raise ValueError('Invalid augmentation strategy {}'.format(p['augmentation_strategy']))
 
 
 def get_val_transformations(p):
     return transforms.Compose([
-        transforms.CenterCrop(p['transformation_kwargs']['crop_size']),
-        transforms.ToTensor(),
-        transforms.Normalize(**p['transformation_kwargs']['normalize'])])
+            transforms.CenterCrop(p['transformation_kwargs']['crop_size']),
+            transforms.ToTensor(), 
+            transforms.Normalize(**p['transformation_kwargs']['normalize'])])
 
 
 def get_optimizer(p, model, cluster_head_only=False):
-    if cluster_head_only:  # Only weights in the cluster head will be updated
+    if cluster_head_only: # Only weights in the cluster head will be updated 
         for name, param in model.named_parameters():
-            if 'cluster_head' in name:
-                param.requires_grad = True
-            else:
-                param.requires_grad = False
+                if 'cluster_head' in name:
+                    param.requires_grad = True 
+                else:
+                    param.requires_grad = False 
         params = list(filter(lambda p: p.requires_grad, model.parameters()))
-        assert (len(params) == 2 * p['num_heads'])
+        assert(len(params) == 2 * p['num_heads'])
 
     else:
         params = model.parameters()
+                
 
     if p['optimizer'] == 'sgd':
         optimizer = torch.optim.SGD(params, **p['optimizer_kwargs'])
 
     elif p['optimizer'] == 'adam':
         optimizer = torch.optim.Adam(params, **p['optimizer_kwargs'])
-
+    
     else:
         raise ValueError('Invalid optimizer {}'.format(p['optimizer']))
 
@@ -311,11 +302,11 @@ def get_optimizer(p, model, cluster_head_only=False):
 
 def adjust_learning_rate(p, optimizer, epoch):
     lr = p['optimizer_kwargs']['lr']
-
+    
     if p['scheduler'] == 'cosine':
         eta_min = lr * (p['scheduler_kwargs']['lr_decay_rate'] ** 3)
         lr = eta_min + (lr - eta_min) * (1 + math.cos(math.pi * epoch / p['epochs'])) / 2
-
+         
     elif p['scheduler'] == 'step':
         steps = np.sum(epoch > np.array(p['scheduler_kwargs']['lr_decay_epochs']))
         if steps > 0:

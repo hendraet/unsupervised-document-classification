@@ -7,7 +7,7 @@ import torch
 import torch.nn.functional as F
 from utils.common_config import get_feature_dimensions_backbone
 from utils.utils import AverageMeter, confusion_matrix
-from data.custom_dataset import NeighborsDataset, DualNeighborsDataset
+from data.custom_dataset import NeighborsDataset
 from sklearn import metrics
 from scipy.optimize import linear_sum_assignment
 from losses.losses import entropy, xentropy
@@ -37,16 +37,15 @@ def get_predictions(p, dataloader, model, return_features=False):
     model.eval()
     predictions = [[] for _ in range(p['num_heads'])]
     probs = [[] for _ in range(p['num_heads'])]
-    neighbor_probs = [[] for _ in range(p['num_heads'])]
-    furthest_neighbor_probs = [[] for _ in range(p['num_heads'])]
     targets = []
     if return_features:
         ft_dim = get_feature_dimensions_backbone(p)
         features = torch.zeros((len(dataloader.sampler), ft_dim)).cuda()
     
-    if isinstance(dataloader.dataset, (NeighborsDataset, DualNeighborsDataset)):  # Also return the neighbors
+    if isinstance(dataloader.dataset, NeighborsDataset): # Also return the neighbors
         key_ = 'anchor'
         include_neighbors = True
+        neighbors = []
 
     else:
         key_ = 'image'
@@ -65,35 +64,16 @@ def get_predictions(p, dataloader, model, return_features=False):
             predictions[i].append(torch.argmax(output_i, dim=1))
             probs[i].append(F.softmax(output_i, dim=1))
         targets.append(batch['target'])
-
         if include_neighbors:
-            images = batch['neighbor'].cuda(non_blocking=True)
-            output = model(images)
-            for i, output_i in enumerate(output):
-                neighbor_probs[i].append(F.softmax(output_i, dim=1))
+            neighbors.append(batch['possible_neighbors'])
 
-            if isinstance(dataloader.dataset, DualNeighborsDataset):
-                images = batch['furthest_neighbor'].cuda(non_blocking=True)
-                output = model(images)
-                for i, output_i in enumerate(output):
-                    furthest_neighbor_probs[i].append(F.softmax(output_i, dim=1))
-
-    predictions = [torch.cat(pred_, dim=0).cpu() for pred_ in predictions]
+    predictions = [torch.cat(pred_, dim = 0).cpu() for pred_ in predictions]
     probs = [torch.cat(prob_, dim=0).cpu() for prob_ in probs]
     targets = torch.cat(targets, dim=0)
 
     if include_neighbors:
-        neighbor_probs = [torch.cat(prob_, dim=0).cpu() for prob_ in neighbor_probs]
-        if isinstance(dataloader.dataset, DualNeighborsDataset):
-            furthest_neighbor_probs = [torch.cat(prob_, dim=0).cpu() for prob_ in furthest_neighbor_probs]
-            # neighbors = torch.cat(neighbors, dim=0)
-            # furthest_neighbors = torch.cat(furthest_neighbors, dim=0)
-            out = [{'predictions': pred_, 'probabilities': prob_, 'targets': targets, 'furthest_neighbors': fn_prob_, 'neighbors': n_prob_} for
-                   pred_, prob_, n_prob_, fn_prob_ in zip(predictions, probs, neighbor_probs, furthest_neighbor_probs)]
-        else:
-            # neighbors = torch.cat(neighbors, dim=0)
-            out = [{'predictions': pred_, 'probabilities': prob_, 'targets': targets, 'neighbors': n_prob_} for
-                   pred_, prob_, n_prob_ in zip(predictions, probs, neighbor_probs)]
+        neighbors = torch.cat(neighbors, dim=0)
+        out = [{'predictions': pred_, 'probabilities': prob_, 'targets': targets, 'neighbors': neighbors} for pred_, prob_ in zip(predictions, probs)]
 
     else:
         out = [{'predictions': pred_, 'probabilities': prob_, 'targets': targets} for pred_, prob_ in zip(predictions, probs)]
@@ -105,7 +85,7 @@ def get_predictions(p, dataloader, model, return_features=False):
 
 
 @torch.no_grad()
-def scan_evaluate(predictions, criterion):
+def scan_evaluate(predictions):
     # Evaluate model based on SCAN loss.
     num_heads = len(predictions)
     output = []
@@ -113,13 +93,22 @@ def scan_evaluate(predictions, criterion):
     for head in predictions:
         # Neighbors and anchors
         probs = head['probabilities']
-        neighbor_probs = head['neighbors']
-        furthest_neighbor_probs = None
+        neighbors = head['neighbors']
+        anchors = torch.arange(neighbors.size(0)).view(-1, 1).expand_as(neighbors)
 
-        if 'furthest_neighbors' in head:
-            furthest_neighbor_probs = head['furthest_neighbors']
+        # Entropy loss
+        entropy_loss = entropy(torch.mean(probs, dim=0), input_as_probabilities=True).item()
 
-        total_loss, consistency_loss, entropy_loss = criterion.from_probabilities(probs, neighbor_probs, furthest_neighbor_probs)
+        # Consistency loss       
+        similarity = torch.matmul(probs, probs.t())
+        neighbors = neighbors.contiguous().view(-1)
+        anchors = anchors.contiguous().view(-1)
+        similarity = similarity[anchors, neighbors]
+        ones = torch.ones_like(similarity)
+        consistency_loss = F.binary_cross_entropy(similarity, ones).item()
+        
+        # Total loss
+        total_loss = - entropy_loss + consistency_loss
         
         output.append({'entropy': entropy_loss, 'consistency': consistency_loss, 'total_loss': total_loss})
 

@@ -122,25 +122,28 @@ class SCANLoss(nn.Module):
         else:
             self.target = None
 
-    def from_probabilities(self, anchors_prob, positives_prob, negatives_prob=None):
-        b, n = anchors_prob.size()
+    def forward(self, anchors, neighbors):
+        """
+        input:
+            - anchors: logits for anchor images w/ shape [b, num_classes]
+            - neighbors: logits for neighbor images w/ shape [b, num_classes]
+
+        output:
+            - Loss
+        """
+        # Softmax
+        b, n = anchors.size()
+        anchors_prob = self.softmax(anchors)
+        positives_prob = self.softmax(neighbors)
 
         # Similarity in output space
         similarity = torch.bmm(anchors_prob.view(b, 1, n), positives_prob.view(b, n, 1)).squeeze()
         ones = torch.ones_like(similarity)
         consistency_loss = self.bce(similarity, ones)
 
-        if negatives_prob is not None:
-            # Similarity in output space
-            similarity = torch.bmm(anchors_prob.view(b, 1, n), negatives_prob.view(b, n, 1)).squeeze()
-            ones = torch.ones_like(similarity)
-            negatives_consistency_loss = self.bce(similarity, ones)
-
-            consistency_loss = consistency_loss - negatives_consistency_loss
-
         # Entropy loss
         if self.target is not None:
-            entropy_loss = xentropy(torch.mean(anchors_prob, 0), self.target, input_as_probabilities=True)
+            entropy_loss = xentropy(torch.mean(anchors_prob, 0), self.target,  input_as_probabilities=True)
         else:
             entropy_loss = entropy(torch.mean(anchors_prob, 0), input_as_probabilities=True)
 
@@ -148,26 +151,6 @@ class SCANLoss(nn.Module):
         total_loss = consistency_loss - self.entropy_weight * entropy_loss
 
         return total_loss, consistency_loss, entropy_loss
-
-    def forward(self, anchors, neighbors, furthest_neighbors=None):
-        """
-        input:
-            - anchors: logits for anchor images w/ shape [b, num_classes]
-            - neighbors: logits for neighbor images w/ shape [b, num_classes]
-            - furthest_neighbors: logits for furthest neighbor images w/ shape [b, num_classes]
-
-        output:
-            - Loss
-        """
-        # Softmax
-        anchors_prob = self.softmax(anchors)
-        positives_prob = self.softmax(neighbors)
-        negatives_prob = None
-
-        if furthest_neighbors is not None:
-            negatives_prob = self.softmax(furthest_neighbors)
-
-        return self.from_probabilities(anchors_prob, positives_prob, negatives_prob)
 
 
 class SimCLRLoss(nn.Module):
