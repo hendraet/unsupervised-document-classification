@@ -3,7 +3,7 @@ setup: moco # MoCo is used here
 
 # Model
 backbone: resnet50
-pretrained: ./pretrained/moco_v2_800ep_pretrain.pth.tar
+pretrained: ./pretrained/moco_impact.pth.tar
 model_kwargs:
    head: mlp
    features_dim: 128

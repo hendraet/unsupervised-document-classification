@@ -94,14 +94,9 @@ def main():
     transforms = get_val_transformations(p)
     train_dataset = get_train_dataset(p, transforms)
     fill_memory_bank(train_dataloader, model, memory_bank_train)
-    knn_indices, knn_acc = memory_bank_train.mine_nearest_neighbors(topk)
-    print('Accuracy of top-%d nearest neighbors on train set is %.2f' % (topk, 100 * knn_acc))
-    np.save(p['topk_neighbors_train_path'], knn_indices)
-
-    if p["mine_furthest"]:
-        kfn_indices, kfn_acc = memory_bank_train.mine_furthest_neighbors(topk)
-        print('Accuracy of top-%d furthest neighbors on train set is %.2f' % (topk, 100 * kfn_acc))
-        np.save(p['topk_furthest_train_path'], kfn_indices)
+    indices, acc = memory_bank_train.mine_nearest_neighbors(topk)
+    print('Accuracy of top-%d nearest neighbors on train set is %.2f' % (topk, 100 * acc))
+    np.save(p['topk_neighbors_train_path'], indices)
 
     # Mine the topk nearest neighbors (Validation)
     # These will be used for validation.
@@ -109,14 +104,9 @@ def main():
     print(colored('Mine the nearest neighbors (Val)(Top-%d)' % (topk), 'blue'))
     fill_memory_bank(val_dataloader, model, memory_bank_val)
     print('Mine the neighbors')
-    knn_indices, knn_acc = memory_bank_val.mine_nearest_neighbors(topk)
-    print('Accuracy of top-%d nearest neighbors on val set is %.2f' % (topk, 100 * knn_acc))
-    np.save(p['topk_neighbors_val_path'], knn_indices)
-
-    if p["mine_furthest"]:
-        kfn_indices, kfn_acc = memory_bank_val.mine_furthest_neighbors(topk)
-        print('Accuracy of top-%d furthest neighbors on val set is %.2f' % (topk, 100 * kfn_acc))
-        np.save(p['topk_furthest_val_path'], kfn_indices)
+    indices, acc = memory_bank_val.mine_nearest_neighbors(topk)
+    print('Accuracy of top-%d nearest neighbors on val set is %.2f' % (topk, 100 * acc))
+    np.save(p['topk_neighbors_val_path'], indices)
 
 
 if __name__ == '__main__':
