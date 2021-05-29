@@ -4,7 +4,7 @@ import torchvision
 from utils.mypath import MyPath
 
 
-class IMPACT(torchvision.datasets.ImageFolder):
+class ImageFolderWrapper(torchvision.datasets.ImageFolder):
     def __init__(self, root, split="train", transform=None, target_transform=None):
         super().__init__(os.path.join(root, split), transform, target_transform)
 
