@@ -9,7 +9,7 @@ class MyPath(object):
     @staticmethod
     def db_root_dir(database=''):
         db_names = {'cifar-10', 'stl-10', 'cifar-20', 'impact_kb', 'impact_full_balanced', 'impact_full_imbalanced',
-                    'imagenet', 'imagenet_50', 'imagenet_100', 'imagenet_200'}
+                    'imagenet', 'imagenet_50', 'imagenet_100', 'imagenet_200', 'HDI_balanced', 'HDI_imbalanced'}
         assert(database in db_names)
 
         if database == 'cifar-10':
@@ -29,6 +29,12 @@ class MyPath(object):
 
         if database == 'impact_full_imbalanced':
             return './IMPACT_Full_Imbalanced_240/'
+
+        if database == 'HDI_balanced':
+            return './HDI_balanced/'
+
+        if database == 'HDI_imbalanced':
+            return './HDI_imbalanced/'
         
         elif database in ['imagenet', 'imagenet_50', 'imagenet_100', 'imagenet_200']:
             return './imagenet/'
