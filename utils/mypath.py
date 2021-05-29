@@ -30,10 +30,10 @@ class MyPath(object):
         if database == 'impact_full_imbalanced':
             return './IMPACT_Full_Imbalanced_240/'
 
-        if database == 'HDI_balanced':
+        if database == 'hdi_balanced':
             return './HDI_balanced/'
 
-        if database == 'HDI_imbalanced':
+        if database == 'hdi_imbalanced':
             return './HDI_imbalanced/'
         
         elif database in ['imagenet', 'imagenet_50', 'imagenet_100', 'imagenet_200']:
