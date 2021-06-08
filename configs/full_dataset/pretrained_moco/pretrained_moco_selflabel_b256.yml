@@ -3,6 +3,7 @@ setup: selflabel
 
 # ema
 use_ema: True
+ema_alpha: 0.999
 
 # Threshold
 confidence_threshold: 0.9
