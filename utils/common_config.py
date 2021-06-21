@@ -62,7 +62,7 @@ def get_model(p, pretrain_path=None):
             backbone = resnet50()
 
         elif p['train_db_name'] in ['impact_kb', 'impact_full_balanced', 'impact_full_imbalanced',
-                                    'hdi_balanced', 'hdi_imbalanced']:
+                                    'hdi_balanced', 'hdi_imbalanced', 'tobacco3482']:
             from models.resnet import resnet50
             backbone = resnet50()
 
@@ -147,7 +147,7 @@ def get_train_dataset(p, transform, to_augmented_dataset=False,
         dataset = STL10(split=split, transform=transform, download=True)
 
     elif p['train_db_name'] in ['impact_kb', 'impact_full_balanced', 'impact_full_imbalanced',
-                                'hdi_balanced', 'hdi_imbalanced']:
+                                'hdi_balanced', 'hdi_imbalanced', 'tobacco3482']:
         from data.imagefolderwrapper import ImageFolderWrapper
         root = MyPath.db_root_dir(p['train_db_name'])
         dataset = ImageFolderWrapper(root, split="train", transform=transform)
@@ -192,7 +192,7 @@ def get_val_dataset(p, transform=None, to_neighbors_dataset=False):
         dataset = STL10(split='test', transform=transform, download=True)
 
     elif p['train_db_name'] in ['impact_kb', 'impact_full_balanced', 'impact_full_imbalanced',
-                                'hdi_balanced', 'hdi_imbalanced']:
+                                'hdi_balanced', 'hdi_imbalanced', 'tobacco3482']:
         from data.imagefolderwrapper import ImageFolderWrapper
         root = MyPath.db_root_dir(p['train_db_name'])
         dataset = ImageFolderWrapper(root, split="test", transform=transform)
