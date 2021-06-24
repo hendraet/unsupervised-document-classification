@@ -101,11 +101,10 @@ def xentropy(x, target, input_as_probabilities):
     x_ = torch.clamp(x, min=EPS)
     b = target * torch.log(x_)
 
-    # We want to minimize this not maximize it, hence the sign
     if len(b.size()) == 2:  # Sample-wise entropy
-        return b.sum(dim=1).mean()
+        return -b.sum(dim=1).mean()
     elif len(b.size()) == 1:  # Distribution-wise entropy
-        return b.sum()
+        return -b.sum()
     else:
         raise ValueError('Input tensor is %d-Dimensional' % (len(b.size())))
 
@@ -143,7 +142,7 @@ class SCANLoss(nn.Module):
 
         # Entropy loss
         if self.target is not None:
-            entropy_loss = xentropy(torch.mean(anchors_prob, 0), self.target,  input_as_probabilities=True)
+            entropy_loss = -1 * xentropy(torch.mean(anchors_prob, 0), self.target,  input_as_probabilities=True)
         else:
             entropy_loss = entropy(torch.mean(anchors_prob, 0), input_as_probabilities=True)
 

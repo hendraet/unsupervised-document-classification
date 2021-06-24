@@ -1,26 +1,26 @@
 # setup
 setup: selflabel
 
-# ema
+# Threshold
+confidence_threshold: 0.99
+
+# EMA
 use_ema: True
 ema_alpha: 0.999
-
-# Threshold
-confidence_threshold: 0.9
 
 # Loss
 criterion: confidence-cross-entropy
 criterion_kwargs:
-   apply_class_balancing: True
+   apply_class_balancing: False
 
 # Model
 backbone: resnet50
 num_heads: 1
 
 # Dataset
-train_db_name: hdi_balanced
-val_db_name: hdi_balanced
-num_classes: 7
+train_db_name: tobacco3482
+val_db_name: tobacco3482
+num_classes: 10
 
 # Transformations
 augmentation_strategy: ours 
@@ -32,7 +32,7 @@ augmentation_kwargs:
    num_strong_augs: 4
    cutout_kwargs:
      n_holes: 1
-     length: 32
+     length: 75
      random: True
 
 transformation_kwargs:
@@ -44,11 +44,11 @@ transformation_kwargs:
 # Hyperparameters
 optimizer: adam
 optimizer_kwargs:
-   lr: 0.0001
-   weight_decay: 0.00001
+   lr: 0.00001
+   weight_decay: 0.0001
 epochs: 100
-batch_size: 256
+batch_size: 512
 num_workers: 8
 
 # Scheduler
-scheduler: constant
+scheduler: constant 
