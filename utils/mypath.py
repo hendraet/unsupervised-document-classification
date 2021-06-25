@@ -35,7 +35,7 @@ class MyPath(object):
             return './HDI_balanced/'
 
         if database == 'hdi_imbalanced':
-            return './HDI_imbalanced/',
+            return './HDI_imbalanced/'
 
         if database == 'tobacco3482':
             return './tobacco3482/'
