@@ -137,7 +137,9 @@ def main():
     print(colored('Evaluate best model based on SCAN metric at the end', 'blue'))
     model_checkpoint = torch.load(p['scan_model'], map_location='cpu')
     model.module.load_state_dict(model_checkpoint['model'])
-    predictions = get_predictions(p, val_dataloader, model)
+    predictions, features, thumbnails = get_predictions(p, val_dataloader, model,
+                                                        return_features=True, return_thumbnails=True)
+    writer.add_embedding(features, predictions[0]['targets'], thumbnails, p['epochs'], p['scan_tb_dir'])
     clustering_stats = hungarian_evaluate(model_checkpoint['head'], predictions,
                                           class_names=val_dataset.dataset.classes,
                                           compute_confusion_matrix=True,

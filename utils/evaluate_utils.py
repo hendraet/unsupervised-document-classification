@@ -32,7 +32,7 @@ def contrastive_evaluate(val_loader, model, memory_bank):
 
 
 @torch.no_grad()
-def get_predictions(p, dataloader, model, return_features=False):
+def get_predictions(p, dataloader, model, return_features=False, return_thumbnails=False):
     # Make predictions on a dataset with neighbors
     model.eval()
     predictions = [[] for _ in range(p['num_heads'])]
@@ -41,6 +41,9 @@ def get_predictions(p, dataloader, model, return_features=False):
     if return_features:
         ft_dim = get_feature_dimensions_backbone(p)
         features = torch.zeros((len(dataloader.sampler), ft_dim)).cuda()
+
+    if return_thumbnails:
+        thumbnails = torch.zeros((len(dataloader.sampler), 3, 64, 64)).cuda()
     
     if isinstance(dataloader.dataset, NeighborsDataset): # Also return the neighbors
         key_ = 'anchor'
@@ -57,9 +60,18 @@ def get_predictions(p, dataloader, model, return_features=False):
         bs = images.shape[0]
         res = model(images, forward_pass='return_all')
         output = res['output']
+
         if return_features:
             features[ptr: ptr+bs] = res['features']
+        if return_thumbnails:
+            means = p['transformation_kwargs']['normalize']['mean']
+            stds = p['transformation_kwargs']['normalize']['std']
+            for i in range(3):
+                images[:, i] = (images[:, i] * stds[i]) + means[i]
+            thumbnails[ptr: ptr+bs] = torch.nn.functional.interpolate(images, size=(64, 64), mode='bicubic', align_corners=False)
+        if return_features or return_thumbnails:
             ptr += bs
+
         for i, output_i in enumerate(output):
             predictions[i].append(torch.argmax(output_i, dim=1))
             probs[i].append(F.softmax(output_i, dim=1))
@@ -78,7 +90,9 @@ def get_predictions(p, dataloader, model, return_features=False):
     else:
         out = [{'predictions': pred_, 'probabilities': prob_, 'targets': targets} for pred_, prob_ in zip(predictions, probs)]
 
-    if return_features:
+    if return_thumbnails:
+        return out, features.cpu(), thumbnails.cpu()
+    elif return_features:
         return out, features.cpu()
     else:
         return out
