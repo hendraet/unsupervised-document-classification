@@ -10,7 +10,7 @@ class MyPath(object):
     def db_root_dir(database=''):
         db_names = {'cifar-10', 'stl-10', 'cifar-20', 'impact_kb', 'impact_full_balanced', 'impact_full_imbalanced',
                     'imagenet', 'imagenet_50', 'imagenet_100', 'imagenet_200', 'hdi_balanced', 'hdi_imbalanced',
-                    'tobacco3482'}
+                    'tobacco3482', 'rvl-cdip'}
         assert(database in db_names)
 
         if database == 'cifar-10':
@@ -22,23 +22,26 @@ class MyPath(object):
         elif database == 'stl-10':
             return './stl-10/'
 
-        if database == 'impact_kb':
+        elif database == 'impact_kb':
             return './IMPACT_KB_240/'
 
-        if database == 'impact_full_balanced':
+        elif database == 'impact_full_balanced':
             return './IMPACT_Full_Balanced_240/'
 
-        if database == 'impact_full_imbalanced':
+        elif database == 'impact_full_imbalanced':
             return './IMPACT_Full_Imbalanced_240/'
 
-        if database == 'hdi_balanced':
+        elif database == 'hdi_balanced':
             return './HDI_balanced/'
 
-        if database == 'hdi_imbalanced':
+        elif database == 'hdi_imbalanced':
             return './HDI_imbalanced/'
 
-        if database == 'tobacco3482':
+        elif database == 'tobacco3482':
             return './tobacco3482/'
+
+        elif database == 'rvl-cdip':
+            return './rvl-cdip-240/'
         
         elif database in ['imagenet', 'imagenet_50', 'imagenet_100', 'imagenet_200']:
             return './imagenet/'
