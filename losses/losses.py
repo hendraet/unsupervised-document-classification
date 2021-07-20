@@ -110,11 +110,12 @@ def xentropy(x, target, input_as_probabilities):
 
 
 class SCANLoss(nn.Module):
-    def __init__(self, target=None, entropy_weight=2.0):
+    def __init__(self, target=None, entropy_weight=2.0, temperature=1.0):
         super(SCANLoss, self).__init__()
         self.softmax = nn.Softmax(dim=1)
         self.bce = nn.BCELoss()
         self.entropy_weight = entropy_weight  # Default = 2.0
+        self.temperature = temperature
 
         if target is not None:
             self.target = torch.FloatTensor(target).cuda()
@@ -142,7 +143,8 @@ class SCANLoss(nn.Module):
 
         # Entropy loss
         if self.target is not None:
-            entropy_loss = -1 * xentropy(torch.mean(anchors_prob, 0), self.target,  input_as_probabilities=True)
+            sharpened_anchors_prob = self.softmax(anchors / self.temperature)
+            entropy_loss = -1 * xentropy(torch.mean(sharpened_anchors_prob, 0), self.target,  input_as_probabilities=True)
         else:
             entropy_loss = entropy(torch.mean(anchors_prob, 0), input_as_probabilities=True)
 
