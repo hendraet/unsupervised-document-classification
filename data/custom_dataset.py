@@ -43,7 +43,7 @@ class AugmentedDataset(Dataset):
     Returns an image with one of its neighbors.
 """
 class NeighborsDataset(Dataset):
-    def __init__(self, dataset, indices, num_neighbors=None):
+    def __init__(self, dataset, indices, num_neighbors=None, neighbors_per_sample=1):
         super(NeighborsDataset, self).__init__()
         transform = dataset.transform
         
@@ -56,6 +56,7 @@ class NeighborsDataset(Dataset):
        
         dataset.transform = None
         self.dataset = dataset
+        self.neighbors_per_sample = neighbors_per_sample
         self.indices = indices # Nearest neighbor indices (np.array  [len(dataset) x k])
         if num_neighbors is not None:
             self.indices = self.indices[:, :num_neighbors+1]
@@ -67,15 +68,15 @@ class NeighborsDataset(Dataset):
     def __getitem__(self, index):
         output = {}
         anchor = self.dataset.__getitem__(index)
-        
-        neighbor_index = np.random.choice(self.indices[index], 1)[0]
-        neighbor = self.dataset.__getitem__(neighbor_index)
-
         anchor['image'] = self.anchor_transform(anchor['image'])
-        neighbor['image'] = self.neighbor_transform(neighbor['image'])
+        
+        neighbor_indices = np.random.choice(self.indices[index], self.neighbors_per_sample, replace=False)
+        neighbors = [self.dataset.__getitem__(i)['image'] for i in neighbor_indices]
+        neighbors = [self.neighbor_transform(neighbor) for neighbor in neighbors]
+        neighbors = torch.stack(neighbors, 0)
 
         output['anchor'] = anchor['image']
-        output['neighbor'] = neighbor['image'] 
+        output['neighbors'] = neighbors
         output['possible_neighbors'] = torch.from_numpy(self.indices[index])
         output['target'] = anchor['target']
         

@@ -110,18 +110,10 @@ def xentropy(x, target, input_as_probabilities):
 
 
 class SCANLoss(nn.Module):
-    def __init__(self, target=None, entropy_weight=2.0, temperature=1.0, contrastive=False):
+    def __init__(self):
         super(SCANLoss, self).__init__()
-        self.softmax = nn.Softmax(dim=1)
+        self.softmax = nn.Softmax(dim=-1)
         self.bce = nn.BCELoss()
-        self.entropy_weight = entropy_weight  # Default = 2.0
-        self.temperature = temperature
-        self.contrastive = contrastive
-
-        if target is not None:
-            self.target = torch.FloatTensor(target).cuda()
-        else:
-            self.target = None
 
     def forward(self, anchors, neighbors):
         """
@@ -133,46 +125,33 @@ class SCANLoss(nn.Module):
             - Loss
         """
         # Softmax
-
+        n = anchors.shape[0]
+        num_neighbors = int(neighbors.shape[0] / n)
         anchors_prob = self.softmax(anchors)
         positives_prob = self.softmax(neighbors)
 
         # Similarity in output space
+        similarity = anchors_prob @ positives_prob.T
+        similarity = similarity.reshape(n, n, num_neighbors)
 
-        if self.contrastive:
-            similarity = anchors_prob @ positives_prob.T
-            labels = torch.zeros_like(similarity)
-            labels.fill_diagonal_(1)
+        direct_target = torch.zeros_like(similarity[:, :, 0])
+        direct_target.fill_diagonal_(1)
+        direct_target = direct_target.flatten()
 
-            consistency_loss1 = self.bce(similarity.flatten(), labels.flatten())
+        transitive_target = anchors_prob @ anchors_prob.T
+        transitive_target.fill_diagonal_(1.0)
+        transitive_target = transitive_target.detach().flatten()
 
-            # similarity2 = torch.matmul(anchors_prob, positives_prob.T)
-            # similarity2 = torch.clamp(similarity2, min=0.0, max=1.0)
+        direct_consistency = torch.zeros(num_neighbors)
+        transitive_consistency = torch.zeros(num_neighbors)
 
-            target = torch.matmul(anchors_prob, anchors_prob.T)
-            # target = torch.clamp(target, min=0.0, max=1.0)
-            target.fill_diagonal_(1.0)
+        for i in range(num_neighbors):
+            direct_consistency[i] = self.bce(similarity[:, :, i].flatten(), direct_target)
+            transitive_consistency[i] = self.bce(similarity[:, :, i].flatten(), transitive_target)
 
-            consistency_loss2 = self.bce(similarity.flatten(), target.detach().flatten())
+        consistency_loss = direct_consistency.mean() + transitive_consistency.mean()
 
-            consistency_loss = consistency_loss1 + consistency_loss2
-        else:
-            b, n = anchors.size()
-            similarity = torch.bmm(anchors_prob.view(b, 1, n), positives_prob.view(b, n, 1)).squeeze()
-            ones = torch.ones_like(similarity)
-            consistency_loss = self.bce(similarity, ones)
-
-        # Entropy loss
-        if self.target is not None:
-            sharpened_anchors_prob = self.softmax(anchors / self.temperature)
-            entropy_loss = -1 * xentropy(torch.mean(sharpened_anchors_prob, 0), self.target,  input_as_probabilities=True)
-        else:
-            entropy_loss = entropy(torch.mean(anchors_prob, 0), input_as_probabilities=True)
-
-        # Total loss
-        total_loss = consistency_loss - self.entropy_weight * entropy_loss
-
-        return total_loss, consistency_loss, entropy_loss
+        return consistency_loss
 
 
 class SimCLRLoss(nn.Module):

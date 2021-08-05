@@ -19,7 +19,7 @@ def get_criterion(p):
 
     elif p['criterion'] == 'scan':
         from losses.losses import SCANLoss
-        criterion = SCANLoss(**p['criterion_kwargs'])
+        criterion = SCANLoss()
 
     elif p['criterion'] == 'confidence-cross-entropy':
         from losses.losses import ConfidenceBasedCE
@@ -172,7 +172,7 @@ def get_train_dataset(p, transform, to_augmented_dataset=False,
     if to_neighbors_dataset: # Dataset returns an image and one of its nearest neighbors.
         from data.custom_dataset import NeighborsDataset
         indices = np.load(p['topk_neighbors_train_path'])
-        dataset = NeighborsDataset(dataset, indices, p['num_neighbors'])
+        dataset = NeighborsDataset(dataset, indices, p['num_neighbors'], p['neighbors_per_sample'])
     
     return dataset
 
@@ -220,13 +220,13 @@ def get_val_dataset(p, transform=None, to_neighbors_dataset=False):
 
 def get_train_dataloader(p, dataset):
     return torch.utils.data.DataLoader(dataset, num_workers=p['num_workers'], 
-            batch_size=p['batch_size'], pin_memory=True, collate_fn=collate_custom,
+            batch_size=p['batch_size'], pin_memory=False, collate_fn=collate_custom,
             drop_last=True, shuffle=True)
 
 
 def get_val_dataloader(p, dataset):
     return torch.utils.data.DataLoader(dataset, num_workers=p['num_workers'],
-            batch_size=p['batch_size'], pin_memory=True, collate_fn=collate_custom,
+            batch_size=p['batch_size'], pin_memory=False, collate_fn=collate_custom,
             drop_last=False, shuffle=False)
 
 
