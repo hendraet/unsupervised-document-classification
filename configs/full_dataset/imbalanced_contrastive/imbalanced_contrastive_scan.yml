@@ -16,7 +16,7 @@ train_db_name: hdi_imbalanced
 val_db_name: hdi_imbalanced
 num_classes: 7
 num_neighbors: 20
-neighbors_per_sample: 3
+neighbors_per_sample: 1
 
 # Transformations
 augmentation_strategy: ours 

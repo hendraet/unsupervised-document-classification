@@ -16,7 +16,7 @@ train_db_name: stl-10
 val_db_name: stl-10
 num_classes: 10
 num_neighbors: 20
-neighbors_per_sample: 3
+neighbors_per_sample: 1
 
 # Transformations
 augmentation_strategy: ours 

@@ -69,8 +69,12 @@ class NeighborsDataset(Dataset):
         output = {}
         anchor = self.dataset.__getitem__(index)
         anchor['image'] = self.anchor_transform(anchor['image'])
+
+        anchor_target = anchor['target']
+        knn_indices = self.indices[index]
+        clean_indices = knn_indices[self.dataset.labels[knn_indices] == anchor_target]
         
-        neighbor_indices = np.random.choice(self.indices[index], self.neighbors_per_sample, replace=False)
+        neighbor_indices = np.random.choice(clean_indices, self.neighbors_per_sample, replace=False)
         neighbors = [self.dataset.__getitem__(i)['image'] for i in neighbor_indices]
         neighbors = [self.neighbor_transform(neighbor) for neighbor in neighbors]
         neighbors = torch.stack(neighbors, 0)
