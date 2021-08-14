@@ -72,7 +72,7 @@ class NeighborsDataset(Dataset):
 
         anchor_target = anchor['target']
         knn_indices = self.indices[index]
-        clean_indices = knn_indices[self.dataset.labels[knn_indices] == anchor_target]
+        clean_indices = knn_indices[self.dataset.targets[knn_indices] == anchor_target]
         
         neighbor_indices = np.random.choice(clean_indices, self.neighbors_per_sample, replace=False)
         neighbors = [self.dataset.__getitem__(i)['image'] for i in neighbor_indices]
