@@ -66,8 +66,6 @@ class MemoryBank(object):
 
     def mine_furthest_neighbors(self, topk, calculate_accuracy=True):
         # mine the topk furthest neighbors for every sample
-        from mlpack import kfn
-
         features = self.features.cpu().numpy()
 
         sample_indices = np.random.randint(0, features.shape[0], (features.shape[0], 2))
