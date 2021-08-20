@@ -165,14 +165,15 @@ def get_train_dataset(p, transform, to_augmented_dataset=False,
         raise ValueError('Invalid train dataset {}'.format(p['train_db_name']))
     
     # Wrap into other dataset (__getitem__ changes)
-    if to_augmented_dataset: # Dataset returns an image and an augmentation of that image.
+    if to_augmented_dataset:  # Dataset returns an image and an augmentation of that image.
         from data.custom_dataset import AugmentedDataset
         dataset = AugmentedDataset(dataset)
 
-    if to_neighbors_dataset: # Dataset returns an image and one of its nearest neighbors.
+    if to_neighbors_dataset:  # Dataset returns an image and one of its nearest neighbors.
         from data.custom_dataset import NeighborsDataset
-        indices = np.load(p['topk_neighbors_train_path'])
-        dataset = NeighborsDataset(dataset, indices, p['num_neighbors'], p['neighbors_per_sample'])
+        knn_indices = np.load(p['topk_neighbors_train_path'])
+        kfn_indices = np.load(p['topk_furthest_train_path'])
+        dataset = NeighborsDataset(dataset, knn_indices, kfn_indices, None)
     
     return dataset
 
@@ -212,8 +213,9 @@ def get_val_dataset(p, transform=None, to_neighbors_dataset=False):
     # Wrap into other dataset (__getitem__ changes) 
     if to_neighbors_dataset: # Dataset returns an image and one of its nearest neighbors.
         from data.custom_dataset import NeighborsDataset
-        indices = np.load(p['topk_neighbors_val_path'])
-        dataset = NeighborsDataset(dataset, indices, 5) # Only use 5
+        knn_indices = np.load(p['topk_neighbors_val_path'])
+        kfn_indices = np.load(p['topk_furthest_val_path'])
+        dataset = NeighborsDataset(dataset, knn_indices, kfn_indices, 5) # Only use 5
 
     return dataset
 

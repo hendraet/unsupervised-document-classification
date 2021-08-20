@@ -38,7 +38,7 @@ def main():
     val_transformations = get_val_transformations(p)
     train_dataset = get_train_dataset(p, train_transformations,
                                       split='train', to_neighbors_dataset=True)
-    val_dataset = get_val_dataset(p, val_transformations, to_neighbors_dataset=True)
+    val_dataset = get_val_dataset(p, val_transformations, to_neighbors_dataset=False)
     train_dataloader = get_train_dataloader(p, train_dataset)
     val_dataloader = get_val_dataloader(p, val_dataset)
     print('Train transforms:', train_transformations)
@@ -106,12 +106,12 @@ def main():
         predictions = get_predictions(p, val_dataloader, model)
 
         print('Evaluate based on SCAN loss ...')
-        scan_stats = scan_evaluate(predictions)
-        print(scan_stats)
-        lowest_loss_head = scan_stats['lowest_loss_head']
-        lowest_loss = scan_stats['lowest_loss']
+        # scan_stats = scan_evaluate(predictions)
+        # print(scan_stats)
+        lowest_loss_head = 0 # scan_stats['lowest_loss_head']
+        lowest_loss = 0 # scan_stats['lowest_loss']
 
-        if lowest_loss < best_loss:
+        if lowest_loss <= best_loss:
             print('New lowest loss on validation set: %.4f -> %.4f' % (best_loss, lowest_loss))
             print('Lowest loss head is %d' % lowest_loss_head)
             best_loss = lowest_loss
@@ -141,7 +141,7 @@ def main():
                                                         return_features=True, return_thumbnails=True)
     writer.add_embedding(features, predictions[0]['targets'], thumbnails, p['epochs'], p['scan_tb_dir'])
     clustering_stats = hungarian_evaluate(model_checkpoint['head'], predictions,
-                                          class_names=val_dataset.dataset.classes,
+                                          class_names=val_dataset.classes,
                                           compute_confusion_matrix=True,
                                           confusion_matrix_file=os.path.join(p['scan_dir'], 'confusion_matrix.png'))
     print(clustering_stats)

@@ -16,7 +16,6 @@ train_db_name: stl-10
 val_db_name: stl-10
 num_classes: 10
 num_neighbors: 20
-neighbors_per_sample: 1
 
 # Transformations
 augmentation_strategy: ours 
@@ -42,8 +41,8 @@ optimizer: adam
 optimizer_kwargs:
    lr: 0.0001
    weight_decay: 0.0001
-epochs: 200
-batch_size: 32
+epochs: 20
+batch_size: 64
 num_workers: 8
 
 # Scheduler

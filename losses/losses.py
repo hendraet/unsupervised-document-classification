@@ -113,9 +113,9 @@ class SCANLoss(nn.Module):
     def __init__(self):
         super(SCANLoss, self).__init__()
         self.softmax = nn.Softmax(dim=-1)
-        self.bce = nn.BCELoss()
+        self.bce = nn.BCELoss(reduction='none')
 
-    def forward(self, anchors, neighbors):
+    def forward(self, anchors, neighbors, labels):
         """
         input:
             - anchors: logits for anchor images w/ shape [b, num_classes]
@@ -125,33 +125,17 @@ class SCANLoss(nn.Module):
             - Loss
         """
         # Softmax
-        n = anchors.shape[0]
-        num_neighbors = int(neighbors.shape[0] / n)
         anchors_prob = self.softmax(anchors)
         positives_prob = self.softmax(neighbors)
 
         # Similarity in output space
-        similarity = anchors_prob @ positives_prob.T
-        similarity = similarity.reshape(n, n, num_neighbors)
+        b, n = anchors_prob.size()
 
-        direct_target = torch.zeros_like(similarity[:, :, 0])
-        direct_target.fill_diagonal_(1)
-        direct_target = direct_target.flatten()
+        # Positives
+        similarity = torch.bmm(anchors_prob.view(b, 1, n), positives_prob.view(b, n, 1)).squeeze()
+        loss = self.bce(similarity, labels)
 
-        transitive_target = anchors_prob @ anchors_prob.T
-        transitive_target.fill_diagonal_(1.0)
-        transitive_target = transitive_target.detach().flatten()
-
-        direct_consistency = torch.zeros(num_neighbors)
-        transitive_consistency = torch.zeros(num_neighbors)
-
-        for i in range(num_neighbors):
-            direct_consistency[i] = self.bce(similarity[:, :, i].flatten(), direct_target)
-            transitive_consistency[i] = self.bce(similarity[:, :, i].flatten(), transitive_target)
-
-        consistency_loss = direct_consistency.mean() + transitive_consistency.mean()
-
-        return consistency_loss
+        return loss.mean()
 
 
 class SimCLRLoss(nn.Module):

@@ -55,24 +55,29 @@ def scan_train(train_loader, model, criterion, optimizer, epoch, writer, update_
     for i, batch in enumerate(train_loader):
         # Forward pass
         anchors = batch['anchor'].cuda(non_blocking=True)
-        neighbors = batch['neighbors'].cuda(non_blocking=True)
-        neighbors = neighbors.reshape(-1, neighbors.shape[2], neighbors.shape[3], neighbors.shape[4])
+        neighbors = batch['neighbor'].cuda(non_blocking=True)
+        labels = batch['label'].cuda(non_blocking=True)
+        # furthest_neighbors = batch['furthest_neighbor'].cuda(non_blocking=True)
 
         if update_cluster_head_only:  # Only calculate gradient for backprop of linear layer
             with torch.no_grad():
                 anchors_features = model(anchors, forward_pass='backbone')
                 neighbors_features = model(neighbors, forward_pass='backbone')
+                # furthest_neighbors_features = model(furthest_neighbors, forward_pass='backbone')
             anchors_output = model(anchors_features, forward_pass='head')
             neighbors_output = model(neighbors_features, forward_pass='head')
+            # furthest_neighbors_output = model(furthest_neighbors_features, forward_pass='head')
 
         else:  # Calculate gradient for backprop of complete network
             anchors_output = model(anchors)
             neighbors_output = model(neighbors)
+            # furthest_neighbors_output = model(furthest_neighbors)
 
             # Loss for every head
         loss = []
-        for anchors_output_subhead, neighbors_output_subhead in zip(anchors_output, neighbors_output):
-            loss_ = criterion(anchors_output_subhead, neighbors_output_subhead)
+        for anchors_output_subhead, neighbors_output_subhead in \
+                zip(anchors_output, neighbors_output):
+            loss_ = criterion(anchors_output_subhead, neighbors_output_subhead, labels)
 
             loss.append(loss_)
 
