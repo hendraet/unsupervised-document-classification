@@ -98,6 +98,7 @@ def main():
     print('Accuracy of top-%d nearest neighbors on train set is %.2f' % (topk, 100 * knn_acc))
     np.save(p['topk_neighbors_train_path'], knn_indices)
 
+    topk = 350
     kfn_indices, kfn_acc = memory_bank_train.mine_furthest_neighbors(topk)
     print('Accuracy of top-%d furthest neighbors on train set is %.2f' % (topk, 100 * kfn_acc))
     np.save(p['topk_furthest_train_path'], kfn_indices)
