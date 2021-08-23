@@ -133,6 +133,7 @@ class SCANLoss(nn.Module):
 
         # Positives
         similarity = torch.bmm(anchors_prob.view(b, 1, n), positives_prob.view(b, n, 1)).squeeze()
+        similarity = torch.clamp(similarity, min=1e-5, max=(1 - 1e-5))
         loss = self.bce(similarity, labels)
 
         return loss.mean()

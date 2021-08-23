@@ -64,17 +64,41 @@ class MemoryBank(object):
         else:
             return indices
 
-    def mine_furthest_neighbors(self, topk, calculate_accuracy=True):
-        # mine the topk furthest neighbors for every sample
+    def mine_negatives(self, k, num_classes, calculate_accuracy=True):
+        from sklearn.cluster import KMeans
+
+        features = self.features.cpu().numpy()
+        kmeans = KMeans(n_clusters=num_classes).fit_predict(features)
+
+        sample_indices = np.arange(features.shape[0])
+        negative_indices = np.zeros((features.shape[0], k), dtype=np.int)
+        for i in range(num_classes):
+            negatives = sample_indices[kmeans != i]
+            shape = sample_indices[kmeans == i].shape[0], k
+            negative_indices[kmeans == i] = np.random.choice(negatives, shape)
+
+        # evaluate
+        if calculate_accuracy:
+            targets = self.targets.cpu().numpy()
+            neighbor_targets = np.take(targets, negative_indices[:, ], axis=0)
+            anchor_targets = np.repeat(targets.reshape(-1, 1), k, axis=1)
+            accuracy = np.mean(neighbor_targets != anchor_targets)
+            return negative_indices, accuracy
+
+        else:
+            return negative_indices
+
+    def mine_negatives_old(self, k, calculate_accuracy=True):
+        # mine k negatives  for every sample
         features = self.features.cpu().numpy()
 
         sample_indices = np.random.randint(0, features.shape[0], (features.shape[0], 2))
         distances = np.linalg.norm(features[sample_indices[:, 0]] - features[sample_indices[:, 1]], axis=1)
         med = np.median(distances)
-        negative_indices = np.random.randint(0, features.shape[0], (features.shape[0], topk))
+        negative_indices = np.random.randint(0, features.shape[0], (features.shape[0], k))
 
         for _ in range(100):
-            new_indices = np.random.randint(0, features.shape[0], (features.shape[0], topk))
+            new_indices = np.random.randint(0, features.shape[0], (features.shape[0], k))
             negative_okay = np.linalg.norm(features[:, np.newaxis, :] - features[new_indices, :], axis=2) > med
 
             negative_indices[negative_okay] = new_indices[negative_okay]
@@ -83,7 +107,7 @@ class MemoryBank(object):
         if calculate_accuracy:
             targets = self.targets.cpu().numpy()
             neighbor_targets = np.take(targets, negative_indices[:, ], axis=0)
-            anchor_targets = np.repeat(targets.reshape(-1, 1), topk, axis=1)
+            anchor_targets = np.repeat(targets.reshape(-1, 1), k, axis=1)
             accuracy = np.mean(neighbor_targets != anchor_targets)
             return negative_indices, accuracy
 
