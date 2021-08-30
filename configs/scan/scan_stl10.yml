@@ -4,8 +4,7 @@ setup: scan
 # Loss
 criterion: scan
 criterion_kwargs:
-   entropy_weight: 0.0
-   contrastive: True
+   entropy_weight: 5.0
 
 # Weight update
 update_cluster_head_only: False # Update full network in SCAN
