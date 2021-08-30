@@ -144,18 +144,7 @@ class SCANLoss(nn.Module):
             labels = torch.zeros_like(similarity)
             labels.fill_diagonal_(1)
 
-            consistency_loss1 = self.bce(similarity.flatten(), labels.flatten())
-
-            # similarity2 = torch.matmul(anchors_prob, positives_prob.T)
-            # similarity2 = torch.clamp(similarity2, min=0.0, max=1.0)
-
-            target = torch.matmul(anchors_prob, anchors_prob.T)
-            # target = torch.clamp(target, min=0.0, max=1.0)
-            target.fill_diagonal_(1.0)
-
-            consistency_loss2 = self.bce(similarity.flatten(), target.detach().flatten())
-
-            consistency_loss = consistency_loss1 + consistency_loss2
+            consistency_loss = self.bce(similarity.flatten(), labels.flatten())
         else:
             b, n = anchors.size()
             similarity = torch.bmm(anchors_prob.view(b, 1, n), positives_prob.view(b, n, 1)).squeeze()
