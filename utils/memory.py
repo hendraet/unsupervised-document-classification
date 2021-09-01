@@ -64,7 +64,7 @@ class MemoryBank(object):
         else:
             return indices
 
-    def mine_negatives(self, k, num_classes, calculate_accuracy=True):
+    def mine_negatives_old(self, k, num_classes, calculate_accuracy=True):
         from sklearn.cluster import KMeans
 
         features = self.features.cpu().numpy()
@@ -88,7 +88,7 @@ class MemoryBank(object):
         else:
             return negative_indices
 
-    def mine_negatives_old(self, k, calculate_accuracy=True):
+    def mine_negatives(self, k, calculate_accuracy=True):
         # mine k negatives  for every sample
         features = self.features.cpu().numpy()
 
