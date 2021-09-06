@@ -25,6 +25,10 @@ def get_criterion(p):
         from losses.losses import ConfidenceBasedCE
         criterion = ConfidenceBasedCE(p['confidence_threshold'], p['criterion_kwargs']['apply_class_balancing'])
 
+    elif p['criterion'] == 'binary-cross-entropy':
+        from losses.losses import BinaryCrossEntropyLoss
+        criterion = BinaryCrossEntropyLoss()
+
     else:
         raise ValueError('Invalid criterion {}'.format(p['criterion']))
 
@@ -91,6 +95,10 @@ def get_model(p, pretrain_path=None):
             assert(p['num_heads'] == 1)
         model = ClusteringModel(backbone, p['num_classes'], p['num_heads'])
 
+    elif p['setup'] == 'simpred':
+        from models.models import SimpredModel
+        model = SimpredModel(backbone)
+
     else:
         raise ValueError('Invalid setup {}'.format(p['setup']))
 
@@ -131,8 +139,8 @@ def get_model(p, pretrain_path=None):
     return model
 
 
-def get_train_dataset(p, transform, to_augmented_dataset=False,
-                        to_neighbors_dataset=False, split=None):
+def get_train_dataset(p, transform, to_augmented_dataset=False, to_neighbors_dataset=False,
+                      to_similarity_dataset=False, split=None):
     # Base dataset
     if p['train_db_name'] == 'cifar-10':
         from data.cifar import CIFAR10
@@ -174,11 +182,14 @@ def get_train_dataset(p, transform, to_augmented_dataset=False,
         knn_indices = np.load(p['topk_neighbors_train_path'])
         kfn_indices = np.load(p['topk_furthest_train_path'])
         dataset = NeighborsDataset(dataset, knn_indices, kfn_indices, None)
+    elif to_similarity_dataset:  # Dataset returns an image and another random image.
+        from data.custom_dataset import SimilarityDataset
+        dataset = SimilarityDataset(dataset)
     
     return dataset
 
 
-def get_val_dataset(p, transform=None, to_neighbors_dataset=False):
+def get_val_dataset(p, transform=None, to_neighbors_dataset=False, to_similarity_dataset=False):
     # Base dataset
     if p['val_db_name'] == 'cifar-10':
         from data.cifar import CIFAR10
@@ -216,6 +227,9 @@ def get_val_dataset(p, transform=None, to_neighbors_dataset=False):
         knn_indices = np.load(p['topk_neighbors_val_path'])
         kfn_indices = np.load(p['topk_furthest_val_path'])
         dataset = NeighborsDataset(dataset, knn_indices, kfn_indices, 5) # Only use 5
+    elif to_similarity_dataset:  # Dataset returns an image and another random image.
+        from data.custom_dataset import SimilarityDataset
+        dataset = SimilarityDataset(dataset)
 
     return dataset
 

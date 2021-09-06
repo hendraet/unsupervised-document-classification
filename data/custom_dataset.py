@@ -111,3 +111,43 @@ class NeighborsDataset(Dataset):
         output['target'] = anchor['target']
         
         return output
+
+""" 
+    NeighborsDataset
+    Returns an image with one of its neighbors.
+"""
+class SimilarityDataset(Dataset):
+    def __init__(self, dataset):
+        super(SimilarityDataset, self).__init__()
+        transform = dataset.transform
+
+        if isinstance(transform, dict):
+            self.anchor_transform = transform['standard']
+            self.neighbor_transform = transform['augment']
+        else:
+            self.anchor_transform = transform
+            self.neighbor_transform = transform
+
+        dataset.transform = None
+        self.dataset = dataset
+
+    def __len__(self):
+        return len(self.dataset)
+
+    def __getitem__(self, index):
+        output = {}
+
+        anchor = self.dataset.__getitem__(index)
+        anchor['image'] = self.anchor_transform(anchor['image'])
+
+        neighbor_index = np.random.randint(len(self))
+        neighbor = self.dataset.__getitem__(neighbor_index)
+        neighbor['image'] = self.neighbor_transform(neighbor['image'])
+
+        label = anchor['target'] == neighbor['target']
+
+        output['image'] = anchor['image']
+        output['neighbor'] = neighbor['image']
+        output['target'] = label
+
+        return output

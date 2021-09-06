@@ -37,20 +37,26 @@ def create_config(config_file_env, config_file_exp, tb_run):
 
     # If we perform clustering or self-labeling step we need additional paths.
     # We also include a run identifier to support multiple runs w/ same hyperparams.
-    if cfg['setup'] in ['scan', 'selflabel']:
+    if cfg['setup'] in ['scan', 'selflabel', 'simpred']:
         base_dir = os.path.join(root_dir, tb_run)
         scan_dir = os.path.join(base_dir, 'scan')
+        simpred_dir = os.path.join(base_dir, 'simpred')
         selflabel_dir = os.path.join(base_dir, 'selflabel') 
         mkdir_if_missing(base_dir)
         mkdir_if_missing(scan_dir)
+        mkdir_if_missing(simpred_dir)
         mkdir_if_missing(selflabel_dir)
         cfg['scan_dir'] = scan_dir
         cfg['scan_checkpoint'] = os.path.join(scan_dir, 'checkpoint.pth.tar')
         cfg['scan_model'] = os.path.join(scan_dir, 'model.pth.tar')
+        cfg['simpred_dir'] = simpred_dir
+        cfg['simpred_checkpoint'] = os.path.join(simpred_dir, 'checkpoint.pth.tar')
+        cfg['simpred_model'] = os.path.join(simpred_dir, 'model.pth.tar')
         cfg['selflabel_dir'] = selflabel_dir
         cfg['selflabel_checkpoint'] = os.path.join(selflabel_dir, 'checkpoint.pth.tar')
         cfg['selflabel_model'] = os.path.join(selflabel_dir, 'model.pth.tar')
         cfg['scan_tb_dir'] = os.path.join(base_dir, 'tb_scan')
+        cfg['simpred_tb_dir'] = os.path.join(base_dir, 'tb_simpred')
         cfg['selflabel_tb_dir'] = os.path.join(base_dir, 'tb_selflabel')
 
     return cfg 

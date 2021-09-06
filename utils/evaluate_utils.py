@@ -45,7 +45,7 @@ def get_predictions(p, dataloader, model, return_features=False, return_thumbnai
     if return_thumbnails:
         thumbnails = torch.zeros((len(dataloader.sampler), 3, 64, 64)).cuda()
     
-    if isinstance(dataloader.dataset, NeighborsDataset): # Also return the neighbors
+    if isinstance(dataloader.dataset, NeighborsDataset):  # Also return the neighbors
         key_ = 'anchor'
         include_neighbors = True
         neighbors = []
@@ -58,7 +58,12 @@ def get_predictions(p, dataloader, model, return_features=False, return_thumbnai
     for batch in dataloader:
         images = batch[key_].cuda(non_blocking=True)
         bs = images.shape[0]
-        res = model(images, forward_pass='return_all')
+
+        if p['setup'] == 'simpred':
+            images2 = batch['neighbor'].cuda(non_blocking=True)
+            res = model(images, images2, forward_pass='return_all')
+        else:
+            res = model(images, forward_pass='return_all')
         output = res['output']
 
         if return_features:
@@ -74,12 +79,12 @@ def get_predictions(p, dataloader, model, return_features=False, return_thumbnai
 
         for i, output_i in enumerate(output):
             predictions[i].append(torch.argmax(output_i, dim=1))
-            probs[i].append(F.softmax(output_i, dim=1))
+            probs[i].append(output_i)
         targets.append(batch['target'])
         if include_neighbors:
             neighbors.append(batch['possible_neighbors'])
 
-    predictions = [torch.cat(pred_, dim = 0).cpu() for pred_ in predictions]
+    predictions = [torch.cat(pred_, dim=0).cpu() for pred_ in predictions]
     probs = [torch.cat(prob_, dim=0).cpu() for prob_ in probs]
     targets = torch.cat(targets, dim=0)
 
@@ -113,17 +118,17 @@ def scan_evaluate(predictions):
         # Entropy loss
         entropy_loss = entropy(torch.mean(probs, dim=0), input_as_probabilities=True).item()
 
-        # Consistency loss       
+        # Consistency loss
         similarity = torch.matmul(probs, probs.t())
         neighbors = neighbors.contiguous().view(-1)
         anchors = anchors.contiguous().view(-1)
         similarity = similarity[anchors, neighbors]
         ones = torch.ones_like(similarity)
         consistency_loss = F.binary_cross_entropy(similarity, ones).item()
-        
+
         # Total loss
         total_loss = - entropy_loss + consistency_loss
-        
+
         output.append({'entropy': entropy_loss, 'consistency': consistency_loss, 'total_loss': total_loss})
 
     total_losses = [output_['total_loss'] for output_ in output]
@@ -131,6 +136,27 @@ def scan_evaluate(predictions):
     lowest_loss = np.min(total_losses)
 
     return {'scan': output, 'lowest_loss_head': lowest_loss_head, 'lowest_loss': lowest_loss}
+
+
+@torch.no_grad()
+def simpred_evaluate(predictions, writer, epoch):
+    # Evaluate model based on classification metrics.
+    head = predictions[0]  # There will always be just one head
+
+    preds = head['predictions']
+    targets = head['targets']
+
+    accuracy = metrics.accuracy_score(targets, preds)
+    precision = metrics.precision_score(targets, preds)
+    recall = metrics.recall_score(targets, preds)
+
+    writer.add_scalar('Evaluate/Accuracy', accuracy, epoch)
+    writer.add_scalar('Evaluate/Precision', precision, epoch)
+    writer.add_scalar('Evaluate/Recall', recall, epoch)
+
+    output = {'accuracy': accuracy, 'precision': precision, 'recall': recall}
+
+    return {'scan': output, 'accuracy': accuracy}
 
 
 @torch.no_grad()

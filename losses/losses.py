@@ -109,13 +109,29 @@ def xentropy(x, target, input_as_probabilities):
         raise ValueError('Input tensor is %d-Dimensional' % (len(b.size())))
 
 
+class BinaryCrossEntropyLoss(nn.Module):
+    def __init__(self):
+        super(BinaryCrossEntropyLoss, self).__init__()
+
+    def forward(self, probs, labels):
+        """
+        input:
+            - similarity: probs for image similarity w/ shape [b]
+
+        output:
+            - Loss
+        """
+        loss = labels * torch.log(probs) + (1 - labels) * torch.log(1 - probs)
+
+        return -loss.mean()
+
+
 class SCANLoss(nn.Module):
     def __init__(self):
         super(SCANLoss, self).__init__()
-        self.softmax = nn.Softmax(dim=-1)
         self.bce = nn.BCELoss(reduction='none')
 
-    def forward(self, anchors, neighbors, labels):
+    def forward(self, anchors_prob, positives_prob, labels):
         """
         input:
             - anchors: logits for anchor images w/ shape [b, num_classes]
@@ -124,9 +140,6 @@ class SCANLoss(nn.Module):
         output:
             - Loss
         """
-        # Softmax
-        anchors_prob = self.softmax(anchors)
-        positives_prob = self.softmax(neighbors)
 
         # Similarity in output space
         b, n = anchors_prob.size()
