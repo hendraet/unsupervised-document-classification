@@ -97,7 +97,7 @@ def get_model(p, pretrain_path=None):
 
     elif p['setup'] == 'simpred':
         from models.models import SimpredModel
-        model = SimpredModel(backbone)
+        model = SimpredModel(backbone, p['hidden_dim'])
 
     else:
         raise ValueError('Invalid setup {}'.format(p['setup']))

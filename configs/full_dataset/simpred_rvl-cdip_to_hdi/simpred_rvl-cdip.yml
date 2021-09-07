@@ -7,6 +7,7 @@ criterion: binary-cross-entropy
 # Weight update
 update_cluster_head_only: False # Update full network
 num_heads: 1 # Useless option, here for compatibility
+hidden_dim: 512
 
 # Model
 backbone: resnet50

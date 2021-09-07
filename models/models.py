@@ -64,11 +64,14 @@ class ClusteringModel(nn.Module):
 
 
 class SimpredModel(nn.Module):
-    def __init__(self, backbone):
+    def __init__(self, backbone, hidden_dim=512):
         super(SimpredModel, self).__init__()
         self.backbone = backbone['backbone']
         self.backbone_dim = backbone['dim']
-        self.head = nn.Sequential(nn.Linear(self.backbone_dim * 2, 1), nn.Sigmoid())
+        self.head = nn.Sequential(nn.Linear(self.backbone_dim * 2, hidden_dim),
+                                  nn.ReLU(),
+                                  nn.Linear(hidden_dim, 1),
+                                  nn.Sigmoid())
 
     def forward(self, x1, x2, forward_pass='default'):
         if forward_pass == 'default':
