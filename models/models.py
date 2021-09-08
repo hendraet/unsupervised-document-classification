@@ -68,10 +68,10 @@ class SimpredModel(nn.Module):
         super(SimpredModel, self).__init__()
         self.backbone = backbone['backbone']
         self.backbone_dim = backbone['dim']
-        self.head = nn.Sequential(nn.Linear(self.backbone_dim * 2, hidden_dim),
-                                  nn.ReLU(),
-                                  nn.Linear(hidden_dim, 1),
-                                  nn.Sigmoid())
+        self.cluster_head = nn.Sequential(nn.Linear(self.backbone_dim * 2, hidden_dim),
+                                          nn.ReLU(),
+                                          nn.Linear(hidden_dim, 1),
+                                          nn.Sigmoid())
 
     def forward(self, x1, x2, forward_pass='default'):
         if forward_pass == 'default':
@@ -80,7 +80,7 @@ class SimpredModel(nn.Module):
 
             concatenated = torch.cat((features1, features2), dim=1)
 
-            out = [self.head(concatenated)]
+            out = [self.cluster_head(concatenated)]
 
         elif forward_pass == 'backbone':
             features1 = self.backbone(x1)
@@ -89,7 +89,7 @@ class SimpredModel(nn.Module):
 
         elif forward_pass == 'head':
             concatenated = torch.cat((x1, x2), dim=1)
-            out = [self.head(concatenated)]
+            out = [self.cluster_head(concatenated)]
 
         elif forward_pass == 'return_all':
             features1 = self.backbone(x1)
@@ -97,7 +97,7 @@ class SimpredModel(nn.Module):
 
             concatenated = torch.cat((features1, features2), dim=1)
 
-            out = {'features': (features1, features2), 'output': [self.head(concatenated)]}
+            out = {'features': (features1, features2), 'output': [self.cluster_head(concatenated)]}
 
         else:
             raise ValueError('Invalid forward pass {}'.format(forward_pass))

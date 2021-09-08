@@ -50,7 +50,7 @@ def main():
 
     # Model
     print(colored('Get model', 'blue'))
-    model = get_model(p)  # , p['pretext_model'])
+    model = get_model(p, p['pretext_model'])
     print(model)
     model = torch.nn.DataParallel(model)
     model = model.cuda()
@@ -108,13 +108,13 @@ def main():
         print(simpred_stats)
         accuracy = simpred_stats['accuracy']
 
-        if accuracy < best_acc:
-            print('New lowest loss on validation set: %.4f -> %.4f' % (best_acc, accuracy))
+        if accuracy > best_acc:
+            print('New highest accuracy on validation set: %.4f -> %.4f' % (best_acc, accuracy))
             best_acc = accuracy
             torch.save({'model': model.module.state_dict()}, p['simpred_model'])
 
         else:
-            print('No new lowest loss on validation set: %.4f -> %.4f' % (best_acc, accuracy))
+            print('No new highest accuracy on validation set: %.4f -> %.4f' % (best_acc, accuracy))
 
         # Checkpoint
         print('Checkpoint ...')

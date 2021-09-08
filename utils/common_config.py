@@ -106,7 +106,7 @@ def get_model(p, pretrain_path=None):
     if pretrain_path is not None and os.path.exists(pretrain_path):
         state = torch.load(pretrain_path, map_location='cpu')
         
-        if p['setup'] == 'scan': # Weights are supposed to be transfered from contrastive training
+        if p['setup'] in ['scan', 'simpred']: # Weights are supposed to be transfered from contrastive training
             missing = model.load_state_dict(state, strict=False)
             assert(set(missing[1]) == {
                 'contrastive_head.0.weight', 'contrastive_head.0.bias', 
@@ -301,7 +301,7 @@ def get_optimizer(p, model, cluster_head_only=False):
                 else:
                     param.requires_grad = False 
         params = list(filter(lambda p: p.requires_grad, model.parameters()))
-        assert(len(params) == 2 * p['num_heads'])
+        # assert(len(params) == 2 * p['num_heads'])
 
     else:
         params = model.parameters()
