@@ -67,7 +67,10 @@ def get_predictions(p, dataloader, model, return_features=False, return_thumbnai
         output = res['output']
 
         if return_features:
-            features[ptr: ptr+bs] = res['features']
+            if p['setup'] == 'simpred':
+                features[ptr: ptr+bs] = res['features'][0]
+            else:
+                features[ptr: ptr+bs] = res['features']
         if return_thumbnails:
             means = p['transformation_kwargs']['normalize']['mean']
             stds = p['transformation_kwargs']['normalize']['std']
@@ -78,7 +81,10 @@ def get_predictions(p, dataloader, model, return_features=False, return_thumbnai
             ptr += bs
 
         for i, output_i in enumerate(output):
-            predictions[i].append(torch.argmax(output_i, dim=1))
+            if p['setup'] == 'simpred':
+                predictions[i].append((output_i > 0.5).double())
+            else:
+                predictions[i].append(torch.argmax(output_i, dim=1))
             probs[i].append(output_i)
         targets.append(batch['target'])
         if include_neighbors:
