@@ -82,7 +82,7 @@ def main():
     else:
         print(colored('No checkpoint file at {}'.format(p['simpred_checkpoint']), 'blue'))
         start_epoch = 0
-        best_acc = 1e4
+        best_acc = 0
 
     # Main loop
     print(colored('Starting main loop', 'blue'))
