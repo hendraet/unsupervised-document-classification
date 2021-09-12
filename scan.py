@@ -36,9 +36,10 @@ def main():
     print(colored('Get dataset and dataloaders', 'blue'))
     train_transformations = get_train_transformations(p)
     val_transformations = get_val_transformations(p)
-    train_dataset = get_train_dataset(p, train_transformations,
+    train_dataset = get_train_dataset(p, train_transformations, use_simpred=p['use_simpred_model'],
                                       split='train', to_neighbors_dataset=True)
-    val_dataset = get_val_dataset(p, val_transformations, to_neighbors_dataset=False)
+    val_dataset = get_val_dataset(p, val_transformations,
+                                  use_simpred=p['use_simpred_model'], to_neighbors_dataset=False)
     train_dataloader = get_train_dataloader(p, train_dataset)
     val_dataloader = get_val_dataloader(p, val_dataset)
     print('Train transforms:', train_transformations)
@@ -54,6 +55,19 @@ def main():
     print(model)
     model = torch.nn.DataParallel(model)
     model = model.cuda()
+
+    # Simpred Model
+    if p['use_simpred_model']:
+        print(colored('Get simpred model', 'blue'))
+        simpred_model = get_model(p, p['simpred_model'], load_simpred=True)
+        print(simpred_model)
+        simpred_model = torch.nn.DataParallel(simpred_model)
+        simpred_model = simpred_model.cuda()
+        for param in simpred_model.parameters():
+            param.requires_grad = False
+    else:
+        print('Not using simpred model')
+        simpred_model = None
 
     # Optimizer
     print(colored('Get optimizer', 'blue'))
@@ -99,7 +113,8 @@ def main():
 
         # Train
         print('Train ...')
-        scan_train(train_dataloader, model, criterion, optimizer, epoch, writer, p['update_cluster_head_only'])
+        scan_train(train_dataloader, model, simpred_model, criterion, optimizer,
+                   epoch, writer, p['update_cluster_head_only'])
 
         # Evaluate 
         print('Make prediction on validation set ...')

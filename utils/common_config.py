@@ -46,7 +46,7 @@ def get_feature_dimensions_backbone(p):
         raise NotImplementedError
 
 
-def get_model(p, pretrain_path=None):
+def get_model(p, pretrain_path=None, load_simpred=False):
     # Get backbone
     if p['backbone'] == 'resnet18':
         if p['train_db_name'] in ['cifar-10', 'cifar-20']:
@@ -89,15 +89,15 @@ def get_model(p, pretrain_path=None):
         from models.models import ContrastiveModel
         model = ContrastiveModel(backbone, **p['model_kwargs'])
 
+    elif p['setup'] == 'simpred' or load_simpred:
+        from models.models import SimpredModel
+        model = SimpredModel(backbone, p['hidden_dim'])
+
     elif p['setup'] in ['scan', 'selflabel']:
         from models.models import ClusteringModel
         if p['setup'] == 'selflabel':
             assert(p['num_heads'] == 1)
         model = ClusteringModel(backbone, p['num_classes'], p['num_heads'])
-
-    elif p['setup'] == 'simpred':
-        from models.models import SimpredModel
-        model = SimpredModel(backbone, p['hidden_dim'])
 
     else:
         raise ValueError('Invalid setup {}'.format(p['setup']))
@@ -105,8 +105,12 @@ def get_model(p, pretrain_path=None):
     # Load pretrained weights
     if pretrain_path is not None and os.path.exists(pretrain_path):
         state = torch.load(pretrain_path, map_location='cpu')
-        
-        if p['setup'] in ['scan', 'simpred']: # Weights are supposed to be transfered from contrastive training
+
+        if load_simpred:
+            missing = model.load_state_dict(state['model'], strict=False)
+            assert (len(missing.missing_keys) == len(missing.unexpected_keys) == 0)
+
+        elif p['setup'] in ['scan', 'simpred']: # Weights are supposed to be transfered from contrastive training
             missing = model.load_state_dict(state, strict=False)
             assert(set(missing[1]) == {
                 'contrastive_head.0.weight', 'contrastive_head.0.bias', 
@@ -140,7 +144,7 @@ def get_model(p, pretrain_path=None):
 
 
 def get_train_dataset(p, transform, to_augmented_dataset=False, to_neighbors_dataset=False,
-                      to_similarity_dataset=False, split=None):
+                      to_similarity_dataset=False, split=None, use_simpred=False):
     # Base dataset
     if p['train_db_name'] == 'cifar-10':
         from data.cifar import CIFAR10
@@ -181,7 +185,7 @@ def get_train_dataset(p, transform, to_augmented_dataset=False, to_neighbors_dat
         from data.custom_dataset import NeighborsDataset
         knn_indices = np.load(p['topk_neighbors_train_path'])
         kfn_indices = np.load(p['topk_furthest_train_path'])
-        dataset = NeighborsDataset(dataset, knn_indices, kfn_indices, None)
+        dataset = NeighborsDataset(dataset, knn_indices, kfn_indices, use_simpred, None)
     elif to_similarity_dataset:  # Dataset returns an image and another random image.
         from data.custom_dataset import SimilarityDataset
         dataset = SimilarityDataset(dataset)
@@ -189,7 +193,7 @@ def get_train_dataset(p, transform, to_augmented_dataset=False, to_neighbors_dat
     return dataset
 
 
-def get_val_dataset(p, transform=None, to_neighbors_dataset=False, to_similarity_dataset=False):
+def get_val_dataset(p, transform=None, to_neighbors_dataset=False, to_similarity_dataset=False, use_simpred=False):
     # Base dataset
     if p['val_db_name'] == 'cifar-10':
         from data.cifar import CIFAR10
@@ -226,7 +230,7 @@ def get_val_dataset(p, transform=None, to_neighbors_dataset=False, to_similarity
         from data.custom_dataset import NeighborsDataset
         knn_indices = np.load(p['topk_neighbors_val_path'])
         kfn_indices = np.load(p['topk_furthest_val_path'])
-        dataset = NeighborsDataset(dataset, knn_indices, kfn_indices, 5) # Only use 5
+        dataset = NeighborsDataset(dataset, knn_indices, kfn_indices, use_simpred, 5) # Only use 5
     elif to_similarity_dataset:  # Dataset returns an image and another random image.
         from data.custom_dataset import SimilarityDataset
         dataset = SimilarityDataset(dataset)

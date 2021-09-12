@@ -43,7 +43,7 @@ class AugmentedDataset(Dataset):
     Returns an image with one of its neighbors.
 """
 class NeighborsDataset(Dataset):
-    def __init__(self, dataset, knn_indices, kfn_indices, num_neighbors=None):
+    def __init__(self, dataset, knn_indices, kfn_indices, use_simpred, num_neighbors=None):
         super(NeighborsDataset, self).__init__()
         transform = dataset.transform
         
@@ -58,6 +58,8 @@ class NeighborsDataset(Dataset):
         self.dataset = dataset
         self.knn_indices = knn_indices  # Nearest neighbor indices (np.array  [len(dataset) x k])
         self.kfn_indices = kfn_indices  # Nearest neighbor indices (np.array  [len(dataset) x k])
+        self.positive_ratio = self.knn_indices.shape[1] / (self.knn_indices.shape[1] + self.kfn_indices.shape[1])
+        self.use_simpred = use_simpred
         if num_neighbors is not None:
             self.knn_indices = self.knn_indices[:, :num_neighbors + 1]
             self.kfn_indices = self.kfn_indices[:, :num_neighbors + 1]
@@ -65,49 +67,34 @@ class NeighborsDataset(Dataset):
         assert (self.kfn_indices.shape[0] == len(self.dataset))
 
     def __len__(self):
-        return self.knn_indices.shape[0] * self.knn_indices.shape[1] + \
-               self.kfn_indices.shape[0] * self.kfn_indices.shape[1]
-
-    def _map_index(self, index):
-        if index < self.knn_indices.shape[0] * self.knn_indices.shape[1]:
-            label = 1.0
-            anchor = index // self.knn_indices.shape[1]
-            neighbor_index = index - anchor * self.knn_indices.shape[1]
-            neighbor = self.knn_indices[anchor, neighbor_index]
-        else:
-            label = 0.0
-
-            index_new = index - self.knn_indices.shape[0] * self.knn_indices.shape[1]
-            anchor = index_new // self.kfn_indices.shape[1]
-            neighbor_index = index_new - anchor * self.kfn_indices.shape[1]
-            neighbor = self.kfn_indices[anchor, neighbor_index]
-
-        return anchor, neighbor, label
+        return len(self.dataset)
 
     def __getitem__(self, index):
         output = {}
 
-        anchor_index, neighbor_index, label = self._map_index(index)
+        if self.use_simpred:
+            neighbor_index = np.random.randint(len(self))
+            label = 0  # Placeholder, simpred output will be used instead
+        else:
+            rand = np.random.random_sample()
+            # Decide whether to sample a positive or a negative
+            if rand < self.positive_ratio:
+                neighbor_index = np.random.choice(self.knn_indices)
+                label = 1
+            else:
+                neighbor_index = np.random.choice(self.kfn_indices)
+                label = 0
 
-        anchor = self.dataset.__getitem__(anchor_index)
+        anchor = self.dataset.__getitem__(index)
         anchor['image'] = self.anchor_transform(anchor['image'])
         
-        # neighbor_index = np.random.choice(self.knn_indices[index])
         neighbor = self.dataset.__getitem__(neighbor_index)
         neighbor['image'] = self.neighbor_transform(neighbor['image'])
-
-        # label = 1.0 if anchor['target'] == neighbor['target'] else 0.0
-
-        # furthest_neighbor_index = np.random.choice(self.kfn_indices[index])
-        # furthest_neighbor = self.dataset.__getitem__(furthest_neighbor_index)['image']
-        # furthest_neighbor = self.neighbor_transform(furthest_neighbor)
 
         output['anchor'] = anchor['image']
         output['neighbor'] = neighbor['image']
         output['label'] = label
-        # output['furthest_neighbor'] = furthest_neighbor
-        output['possible_neighbors'] = torch.from_numpy(self.knn_indices[anchor_index])
-        # output['possible_furthest_neighbors'] = torch.from_numpy(self.kfn_indices[index])
+        output['possible_neighbors'] = torch.from_numpy(self.knn_indices[index])
         output['target'] = anchor['target']
         
         return output
@@ -131,6 +118,15 @@ class SimilarityDataset(Dataset):
         dataset.transform = None
         self.dataset = dataset
 
+        num_classes = np.unique(dataset.labels).shape[0]
+        self.indices_by_class = [[] for _ in range(num_classes)]
+        indices = np.arange(len(self))
+
+        for i in range(num_classes):
+            self.indices_by_class[i] = indices[self.dataset.labels == i]
+
+        self.cls_distribution = np.array([cls_indices.shape[0] for cls_indices in self.indices_by_class])
+
     def __len__(self):
         return len(self.dataset)
 
@@ -140,14 +136,24 @@ class SimilarityDataset(Dataset):
         anchor = self.dataset.__getitem__(index)
         anchor['image'] = self.anchor_transform(anchor['image'])
 
-        neighbor_index = np.random.randint(len(self))
-        neighbor = self.dataset.__getitem__(neighbor_index)
-        neighbor['image'] = self.neighbor_transform(neighbor['image'])
+        # Decide whether to return a positive or a negative
+        positive = np.random.random_sample() > 0.5
 
-        label = anchor['target'] == neighbor['target']
+        if positive:
+            neighbor_index = np.random.choice(self.indices_by_class[anchor['target']])
+            neighbor = self.dataset.__getitem__(neighbor_index)
+            neighbor['image'] = self.neighbor_transform(neighbor['image'])
+        else:
+            dist = self.cls_distribution.copy()
+            dist[anchor['target']] = 0
+            dist = dist / dist.sum()
+            negative_cls = np.random.choice(np.arange(len(self.indices_by_class)), p=dist)
+            negative_index = np.random.choice(self.indices_by_class[negative_cls])
+            neighbor = self.dataset.__getitem__(negative_index)
+            neighbor['image'] = self.neighbor_transform(neighbor['image'])
 
         output['image'] = anchor['image']
         output['neighbor'] = neighbor['image']
-        output['target'] = label
+        output['target'] = int(positive)
 
         return output

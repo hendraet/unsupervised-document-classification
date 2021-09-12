@@ -40,7 +40,7 @@ def simclr_train(train_loader, model, criterion, optimizer, epoch):
             progress.display(i)
 
 
-def scan_train(train_loader, model, criterion, optimizer, epoch, writer, update_cluster_head_only=False):
+def scan_train(train_loader, model, simpred_model, criterion, optimizer, epoch, writer, update_cluster_head_only=False):
     """ 
     Train w/ SCAN-Loss
     """
@@ -57,7 +57,10 @@ def scan_train(train_loader, model, criterion, optimizer, epoch, writer, update_
         anchors = batch['anchor'].cuda(non_blocking=True)
         neighbors = batch['neighbor'].cuda(non_blocking=True)
         labels = batch['label'].cuda(non_blocking=True)
-        # furthest_neighbors = batch['furthest_neighbor'].cuda(non_blocking=True)
+
+        if simpred_model is not None:
+            simpred = simpred_model(anchors, neighbors)[0]
+            labels = (simpred > 0.5).float().squeeze()
 
         if update_cluster_head_only:  # Only calculate gradient for backprop of linear layer
             with torch.no_grad():
