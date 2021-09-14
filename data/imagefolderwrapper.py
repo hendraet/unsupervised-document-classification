@@ -1,8 +1,6 @@
 import os
 import torchvision
 
-from utils.mypath import MyPath
-
 
 class ImageFolderWrapper(torchvision.datasets.ImageFolder):
     def __init__(self, root, split="train", transform=None, target_transform=None):

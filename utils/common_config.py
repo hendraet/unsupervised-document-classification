@@ -26,8 +26,7 @@ def get_criterion(p):
         criterion = ConfidenceBasedCE(p['confidence_threshold'], p['criterion_kwargs']['apply_class_balancing'])
 
     elif p['criterion'] == 'binary-cross-entropy':
-        from losses.losses import BinaryCrossEntropyLoss
-        criterion = BinaryCrossEntropyLoss()
+        criterion = torch.nn.BCELoss()
 
     else:
         raise ValueError('Invalid criterion {}'.format(p['criterion']))

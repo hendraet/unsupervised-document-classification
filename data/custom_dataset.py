@@ -6,6 +6,9 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
+from data.imagefolderwrapper import ImageFolderWrapper
+from data.stl import STL10
+
 """ 
     AugmentedDataset
     Returns an image together with an augmentation.
@@ -100,8 +103,8 @@ class NeighborsDataset(Dataset):
         return output
 
 """ 
-    NeighborsDataset
-    Returns an image with one of its neighbors.
+    SimilarityDataset
+    Returns an image with one of its neighbors as well as their similarity.
 """
 class SimilarityDataset(Dataset):
     def __init__(self, dataset):
@@ -118,12 +121,18 @@ class SimilarityDataset(Dataset):
         dataset.transform = None
         self.dataset = dataset
 
-        num_classes = np.unique(dataset.labels).shape[0]
+        if isinstance(self.dataset, STL10):
+            labels = self.dataset.labels
+        elif isinstance(self.dataset, ImageFolderWrapper):
+            labels = [sample[1] for sample in self.dataset.imgs]
+            labels = np.array(labels)
+
+        num_classes = np.unique(labels).shape[0]
         self.indices_by_class = [[] for _ in range(num_classes)]
         indices = np.arange(len(self))
 
         for i in range(num_classes):
-            self.indices_by_class[i] = indices[self.dataset.labels == i]
+            self.indices_by_class[i] = indices[labels == i]
 
         self.cls_distribution = np.array([cls_indices.shape[0] for cls_indices in self.indices_by_class])
 
@@ -154,6 +163,6 @@ class SimilarityDataset(Dataset):
 
         output['image'] = anchor['image']
         output['neighbor'] = neighbor['image']
-        output['target'] = int(positive)
+        output['target'] = float(positive)
 
         return output

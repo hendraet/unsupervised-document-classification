@@ -80,7 +80,7 @@ class SimpredModel(nn.Module):
 
             concatenated = torch.cat((features1, features2), dim=1)
 
-            out = [self.cluster_head(concatenated)]
+            out = [self.cluster_head(concatenated).squeeze()]
 
         elif forward_pass == 'backbone':
             features1 = self.backbone(x1)
@@ -89,7 +89,7 @@ class SimpredModel(nn.Module):
 
         elif forward_pass == 'head':
             concatenated = torch.cat((x1, x2), dim=1)
-            out = [self.cluster_head(concatenated)]
+            out = [self.cluster_head(concatenated).squeeze()]
 
         elif forward_pass == 'return_all':
             features1 = self.backbone(x1)
@@ -97,7 +97,7 @@ class SimpredModel(nn.Module):
 
             concatenated = torch.cat((features1, features2), dim=1)
 
-            out = {'features': (features1, features2), 'output': [self.cluster_head(concatenated)]}
+            out = {'features': (features1, features2), 'output': [self.cluster_head(concatenated).squeeze()]}
 
         else:
             raise ValueError('Invalid forward pass {}'.format(forward_pass))

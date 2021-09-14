@@ -60,7 +60,8 @@ def scan_train(train_loader, model, simpred_model, criterion, optimizer, epoch, 
 
         if simpred_model is not None:
             simpred = simpred_model(anchors, neighbors)[0]
-            labels = (simpred > 0.5).float().squeeze()
+            # labels = simpred
+            labels = (simpred > 0.5).float()
 
         if update_cluster_head_only:  # Only calculate gradient for backprop of linear layer
             with torch.no_grad():

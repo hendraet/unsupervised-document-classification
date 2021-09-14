@@ -109,23 +109,6 @@ def xentropy(x, target, input_as_probabilities):
         raise ValueError('Input tensor is %d-Dimensional' % (len(b.size())))
 
 
-class BinaryCrossEntropyLoss(nn.Module):
-    def __init__(self):
-        super(BinaryCrossEntropyLoss, self).__init__()
-
-    def forward(self, probs, labels):
-        """
-        input:
-            - similarity: probs for image similarity w/ shape [b]
-
-        output:
-            - Loss
-        """
-        loss = labels * torch.log(probs) + (1 - labels) * torch.log(1 - probs)
-
-        return -loss.mean()
-
-
 class SCANLoss(nn.Module):
     def __init__(self):
         super(SCANLoss, self).__init__()
