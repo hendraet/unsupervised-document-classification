@@ -76,26 +76,32 @@ class NeighborsDataset(Dataset):
         output = {}
 
         if self.use_simpred:
-            neighbor_index = np.random.randint(len(self))
+            query_index = np.random.randint(len(self))
             label = 0  # Placeholder, simpred output will be used instead
+
+            # Also fetch a neighbor
+            neighbor_index = np.random.choice(self.knn_indices[index])
+            neighbor = self.dataset.__getitem__(neighbor_index)
+            neighbor['image'] = self.neighbor_transform(neighbor['image'])
+            output['neighbor'] = neighbor['image']
         else:
             rand = np.random.random_sample()
             # Decide whether to sample a positive or a negative
             if rand < self.positive_ratio:
-                neighbor_index = np.random.choice(self.knn_indices)
+                query_index = np.random.choice(self.knn_indices[index])
                 label = 1
             else:
-                neighbor_index = np.random.choice(self.kfn_indices)
+                query_index = np.random.choice(self.kfn_indices[index])
                 label = 0
 
         anchor = self.dataset.__getitem__(index)
         anchor['image'] = self.anchor_transform(anchor['image'])
         
-        neighbor = self.dataset.__getitem__(neighbor_index)
-        neighbor['image'] = self.neighbor_transform(neighbor['image'])
+        query = self.dataset.__getitem__(query_index)
+        query['image'] = self.neighbor_transform(query['image'])
 
         output['anchor'] = anchor['image']
-        output['neighbor'] = neighbor['image']
+        output['query'] = query['image']
         output['label'] = label
         output['possible_neighbors'] = torch.from_numpy(self.knn_indices[index])
         output['target'] = anchor['target']
