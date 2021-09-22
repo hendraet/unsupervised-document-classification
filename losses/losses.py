@@ -125,7 +125,7 @@ class SCANLoss(nn.Module):
         """
 
         # Similarity in output space
-        b, n = anchors_prob.size()
+        b, n = anchors_prob.shape
 
         # Positives
         similarity = torch.bmm(anchors_prob.view(b, 1, n), positives_prob.view(b, n, 1)).squeeze()

@@ -15,7 +15,7 @@ from utils.common_config import get_train_transformations, get_val_transformatio
     get_val_dataset, get_val_dataloader, \
     get_optimizer, get_model, get_criterion, \
     adjust_learning_rate
-from utils.evaluate_utils import get_predictions, scan_evaluate, hungarian_evaluate
+from utils.evaluate_utils import get_predictions, hungarian_evaluate, contrastive_evaluate
 from utils.train_utils import scan_train
 
 FLAGS = argparse.ArgumentParser(description='SCAN Loss')
@@ -39,7 +39,7 @@ def main():
     train_dataset = get_train_dataset(p, train_transformations, use_simpred=p['use_simpred_model'],
                                       split='train', to_neighbors_dataset=True)
     val_dataset = get_val_dataset(p, val_transformations,
-                                  use_simpred=p['use_simpred_model'], to_neighbors_dataset=False)
+                                  use_simpred=p['use_simpred_model'], to_neighbors_dataset=True)
     train_dataloader = get_train_dataloader(p, train_dataset)
     val_dataloader = get_val_dataloader(p, val_dataset)
     print('Train transforms:', train_transformations)
@@ -91,14 +91,14 @@ def main():
         model.load_state_dict(checkpoint['model'])
         optimizer.load_state_dict(checkpoint['optimizer'])
         start_epoch = checkpoint['epoch']
-        best_loss = checkpoint['best_loss']
-        best_loss_head = checkpoint['best_loss_head']
+        best_acc = checkpoint['best_acc']
+        best_acc_head = checkpoint['best_acc_head']
 
     else:
         print(colored('No checkpoint file at {}'.format(p['scan_checkpoint']), 'blue'))
         start_epoch = 0
-        best_loss = 1e4
-        best_loss_head = None
+        best_acc = 0
+        best_acc_head = None
 
     # Main loop
     print(colored('Starting main loop', 'blue'))
@@ -120,32 +120,32 @@ def main():
         print('Make prediction on validation set ...')
         predictions = get_predictions(p, val_dataloader, model)
 
-        print('Evaluate based on SCAN loss ...')
-        # scan_stats = scan_evaluate(predictions)
-        # print(scan_stats)
-        lowest_loss_head = 0 # scan_stats['lowest_loss_head']
-        lowest_loss = 0 # scan_stats['lowest_loss']
+        print('Evaluate based on similarity accuracy')
+        scan_stats = contrastive_evaluate(p, val_dataloader, model, simpred_model)
+        print(scan_stats)
+        highest_acc_head = scan_stats['highest_acc_head']
+        highest_acc = scan_stats['highest_acc']
 
-        if lowest_loss <= best_loss:
-            print('New lowest loss on validation set: %.4f -> %.4f' % (best_loss, lowest_loss))
-            print('Lowest loss head is %d' % lowest_loss_head)
-            best_loss = lowest_loss
-            best_loss_head = lowest_loss_head
-            torch.save({'model': model.module.state_dict(), 'head': best_loss_head}, p['scan_model'])
+        if highest_acc > best_acc:
+            print('New highest accuracy on validation set: %.4f -> %.4f' % (best_acc, highest_acc))
+            print('Highest accuracy head is %d' % highest_acc_head)
+            best_acc = highest_acc
+            best_acc_head = highest_acc_head
+            torch.save({'model': model.module.state_dict(), 'head': best_acc_head}, p['scan_model'])
 
         else:
-            print('No new lowest loss on validation set: %.4f -> %.4f' % (best_loss, lowest_loss))
-            print('Lowest loss head is %d' % best_loss_head)
+            print('No new highest accuracy on validation set: %.4f -> %.4f' % (best_acc, highest_acc))
+            print('Highest accuracy head is %d' % highest_acc_head)
 
         print('Evaluate with hungarian matching algorithm ...')
-        clustering_stats = hungarian_evaluate(lowest_loss_head, predictions,
+        clustering_stats = hungarian_evaluate(highest_acc_head, predictions,
                                               compute_confusion_matrix=False, tf_writer=writer, epoch=epoch)
         print(clustering_stats)
 
         # Checkpoint
         print('Checkpoint ...')
         torch.save({'optimizer': optimizer.state_dict(), 'model': model.state_dict(),
-                    'epoch': epoch + 1, 'best_loss': best_loss, 'best_loss_head': best_loss_head},
+                    'epoch': epoch + 1, 'best_acc': best_acc, 'best_acc_head': best_acc_head},
                    p['scan_checkpoint'])
 
     # Evaluate and save the final model

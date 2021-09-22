@@ -145,6 +145,48 @@ def scan_evaluate(predictions):
 
 
 @torch.no_grad()
+def contrastive_evaluate(p, dataloader, model, simpred_model):
+    output = []
+    predictions = [[] for _ in range(p['num_heads'])]
+    targets = []
+
+    for batch in dataloader:
+        anchors = batch['anchor'].cuda(non_blocking=True)
+        queries = batch['query'].cuda(non_blocking=True)
+        labels = batch['label'].cuda(non_blocking=True)
+
+        if simpred_model is not None:
+            simpred = simpred_model(anchors, queries)[0]
+            labels = (simpred > 0.5).float()
+
+        targets.append(labels)
+
+        anchors_output = model(anchors)
+        neighbors_output = model(queries)
+
+        for i in range(p['num_heads']):
+            b, n = anchors_output[i].shape
+            similarity = torch.bmm(anchors_output[i].view(b, 1, n), neighbors_output[i].view(b, n, 1)).squeeze()
+            predictions[i].append((similarity > 0.5).double())
+
+    predictions = [torch.cat(pred_, dim=0).cpu() for pred_ in predictions]
+    targets = torch.cat(targets, dim=0).cpu()
+
+    for preds in predictions:
+        accuracy = metrics.accuracy_score(targets, preds)
+        precision = metrics.precision_score(targets, preds)
+        recall = metrics.recall_score(targets, preds)
+
+        output.append({'accuracy': accuracy, 'precision': precision, 'recall': recall})
+
+    accuracies = [output_['accuracy'] for output_ in output]
+    highest_acc_head = np.argmax(accuracies)
+    highest_acc = np.max(accuracies)
+
+    return {'stats': output, 'highest_acc_head': highest_acc_head, 'highest_acc': highest_acc}
+
+
+@torch.no_grad()
 def simpred_evaluate(predictions, writer, epoch):
     # Evaluate model based on classification metrics.
     head = predictions[0]  # There will always be just one head
