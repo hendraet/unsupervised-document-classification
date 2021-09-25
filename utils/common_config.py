@@ -17,9 +17,9 @@ def get_criterion(p):
         from losses.losses import SimCLRLoss
         criterion = SimCLRLoss(**p['criterion_kwargs'])
 
-    # elif p['criterion'] == 'scan':
-    #     from losses.losses import SCANLoss
-    #     criterion = SCANLoss(**p['criterion_kwargs'])
+    elif p['criterion'] == 'scan':
+        from losses.losses import SCANLoss
+        criterion = SCANLoss(**p['criterion_kwargs'])
 
     elif p['criterion'] == 'mcl':
         from losses.losses import MCLLoss
@@ -147,7 +147,7 @@ def get_model(p, pretrain_path=None, load_simpred=False):
 
 
 def get_train_dataset(p, transform, to_augmented_dataset=False, to_neighbors_dataset=False,
-                      to_similarity_dataset=False, split=None, use_simpred=False):
+                      to_similarity_dataset=False, split=None, use_negatives=False, use_simpred=False):
     # Base dataset
     if p['train_db_name'] == 'cifar-10':
         from data.cifar import CIFAR10
@@ -187,7 +187,12 @@ def get_train_dataset(p, transform, to_augmented_dataset=False, to_neighbors_dat
     if to_neighbors_dataset:  # Dataset returns an image and one of its nearest neighbors.
         from data.custom_dataset import NeighborsDataset
         knn_indices = np.load(p['topk_neighbors_train_path'])
-        kfn_indices = np.load(p['topk_furthest_train_path'])
+
+        if use_negatives:
+            kfn_indices = np.load(p['topk_furthest_train_path'])
+        else:
+            kfn_indices = None
+
         dataset = NeighborsDataset(dataset, knn_indices, kfn_indices, use_simpred, None)
     elif to_similarity_dataset:  # Dataset returns an image and another random image.
         from data.custom_dataset import SimilarityDataset
@@ -196,7 +201,8 @@ def get_train_dataset(p, transform, to_augmented_dataset=False, to_neighbors_dat
     return dataset
 
 
-def get_val_dataset(p, transform=None, to_neighbors_dataset=False, to_similarity_dataset=False, use_simpred=False):
+def get_val_dataset(p, transform=None, to_neighbors_dataset=False, to_similarity_dataset=False,
+                    use_negatives=False, use_simpred=False):
     # Base dataset
     if p['val_db_name'] == 'cifar-10':
         from data.cifar import CIFAR10
@@ -232,7 +238,12 @@ def get_val_dataset(p, transform=None, to_neighbors_dataset=False, to_similarity
     if to_neighbors_dataset: # Dataset returns an image and one of its nearest neighbors.
         from data.custom_dataset import NeighborsDataset
         knn_indices = np.load(p['topk_neighbors_val_path'])
-        kfn_indices = np.load(p['topk_furthest_val_path'])
+
+        if use_negatives:
+            kfn_indices = np.load(p['topk_furthest_val_path'])
+        else:
+            kfn_indices = None
+
         dataset = NeighborsDataset(dataset, knn_indices, kfn_indices, use_simpred, 5) # Only use 5
     elif to_similarity_dataset:  # Dataset returns an image and another random image.
         from data.custom_dataset import SimilarityDataset

@@ -46,7 +46,7 @@ class AugmentedDataset(Dataset):
     Returns an image with one of its neighbors.
 """
 class NeighborsDataset(Dataset):
-    def __init__(self, dataset, knn_indices, kfn_indices=None, use_simpred=False, num_neighbors=None):
+    def __init__(self, dataset, knn_indices, negative_indices=None, use_simpred=False, num_neighbors=None):
         super(NeighborsDataset, self).__init__()
         transform = dataset.transform
         
@@ -60,14 +60,18 @@ class NeighborsDataset(Dataset):
         dataset.transform = None
         self.dataset = dataset
         self.knn_indices = knn_indices  # Nearest neighbor indices (np.array  [len(dataset) x k])
-        self.kfn_indices = kfn_indices  # Nearest neighbor indices (np.array  [len(dataset) x k])
-        self.positive_ratio = self.knn_indices.shape[1] / (self.knn_indices.shape[1] + self.kfn_indices.shape[1])
+        self.negative_indices = negative_indices  # Negative indices (np.array  [len(dataset) x k])
+
+        if self.negative_indices is not None:
+            self.positive_ratio = self.knn_indices.shape[1] / (self.knn_indices.shape[1] + self.negative_indices.shape[1])
+            if num_neighbors is not None:
+                self.negative_indices = self.negative_indices[:, :num_neighbors + 1]
+            assert (self.negative_indices.shape[0] == len(self.dataset))
+
         self.use_simpred = use_simpred
         if num_neighbors is not None:
             self.knn_indices = self.knn_indices[:, :num_neighbors + 1]
-            self.kfn_indices = self.kfn_indices[:, :num_neighbors + 1]
         assert (self.knn_indices.shape[0] == len(self.dataset))
-        assert (self.kfn_indices.shape[0] == len(self.dataset))
 
     def __len__(self):
         return len(self.dataset)
@@ -84,6 +88,9 @@ class NeighborsDataset(Dataset):
             neighbor = self.dataset.__getitem__(neighbor_index)
             neighbor['image'] = self.neighbor_transform(neighbor['image'])
             output['neighbor'] = neighbor['image']
+        elif self.negative_indices is None:
+            query_index = np.random.choice(self.knn_indices[index])
+            label = 1
         else:
             rand = np.random.random_sample()
             # Decide whether to sample a positive or a negative
@@ -91,7 +98,7 @@ class NeighborsDataset(Dataset):
                 query_index = np.random.choice(self.knn_indices[index])
                 label = 1
             else:
-                query_index = np.random.choice(self.kfn_indices[index])
+                query_index = np.random.choice(self.negative_indices[index])
                 label = 0
 
         anchor = self.dataset.__getitem__(index)
