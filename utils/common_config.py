@@ -193,7 +193,7 @@ def get_train_dataset(p, transform, to_augmented_dataset=False, to_neighbors_dat
         else:
             kfn_indices = None
 
-        dataset = NeighborsDataset(dataset, knn_indices, kfn_indices, use_simpred, None)
+        dataset = NeighborsDataset(dataset, knn_indices, kfn_indices, use_simpred, p['num_neighbors'])
     elif to_similarity_dataset:  # Dataset returns an image and another random image.
         from data.custom_dataset import SimilarityDataset
         dataset = SimilarityDataset(dataset)

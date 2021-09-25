@@ -17,9 +17,6 @@ def create_config(config_file_env, config_file_exp, tb_run):
         config = yaml.safe_load(stream)
     
     cfg = EasyDict()
-
-    # For compatibility with older configs
-    cfg['use_simpred_model'] = False
    
     # Copy
     for k, v in config.items():
