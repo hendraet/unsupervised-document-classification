@@ -17,9 +17,13 @@ def get_criterion(p):
         from losses.losses import SimCLRLoss
         criterion = SimCLRLoss(**p['criterion_kwargs'])
 
-    elif p['criterion'] == 'scan':
-        from losses.losses import SCANLoss
-        criterion = SCANLoss()
+    # elif p['criterion'] == 'scan':
+    #     from losses.losses import SCANLoss
+    #     criterion = SCANLoss(**p['criterion_kwargs'])
+
+    elif p['criterion'] == 'mcl':
+        from losses.losses import MCLLoss
+        criterion = MCLLoss()
 
     elif p['criterion'] == 'confidence-cross-entropy':
         from losses.losses import ConfidenceBasedCE

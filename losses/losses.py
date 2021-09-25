@@ -109,9 +109,9 @@ def xentropy(x, target, input_as_probabilities):
         raise ValueError('Input tensor is %d-Dimensional' % (len(b.size())))
 
 
-class SCANLoss(nn.Module):
+class MCLLoss(nn.Module):
     def __init__(self):
-        super(SCANLoss, self).__init__()
+        super(MCLLoss, self).__init__()
         self.bce = nn.BCELoss(reduction='none')
 
     def forward(self, anchors_prob, positives_prob, labels):
