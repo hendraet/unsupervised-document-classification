@@ -145,7 +145,7 @@ def scan_evaluate(predictions):
 
 
 @torch.no_grad()
-def contrastive_evaluate(p, dataloader, model, simpred_model):
+def umcl_evaluate(p, dataloader, model, simpred_model):
     output = []
     predictions = [[] for _ in range(p['num_heads'])]
     targets = []

@@ -46,7 +46,7 @@ class AugmentedDataset(Dataset):
     Returns an image with one of its neighbors.
 """
 class NeighborsDataset(Dataset):
-    def __init__(self, dataset, knn_indices, kfn_indices, use_simpred, num_neighbors=None):
+    def __init__(self, dataset, knn_indices, kfn_indices=None, use_simpred=False, num_neighbors=None):
         super(NeighborsDataset, self).__init__()
         transform = dataset.transform
         

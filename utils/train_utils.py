@@ -40,7 +40,7 @@ def simclr_train(train_loader, model, criterion, optimizer, epoch):
             progress.display(i)
 
 
-def scan_train(train_loader, model, simpred_model, criterion, optimizer, epoch, writer, update_cluster_head_only=False):
+def umcl_train(train_loader, model, simpred_model, criterion, optimizer, epoch, writer, update_cluster_head_only=False):
     """ 
     Train w/ SCAN-Loss
     """
@@ -61,7 +61,6 @@ def scan_train(train_loader, model, simpred_model, criterion, optimizer, epoch, 
         if simpred_model is not None:
             neighbors = batch['neighbor'].cuda(non_blocking=True)
             simpred = simpred_model(anchors, queries)[0]
-            # labels = simpred
             labels = (simpred > 0.5).float()
 
             queries[labels == 1.0] = neighbors[labels == 1.0]

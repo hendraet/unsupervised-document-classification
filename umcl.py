@@ -15,8 +15,8 @@ from utils.common_config import get_train_transformations, get_val_transformatio
     get_val_dataset, get_val_dataloader, \
     get_optimizer, get_model, get_criterion, \
     adjust_learning_rate
-from utils.evaluate_utils import get_predictions, hungarian_evaluate, contrastive_evaluate
-from utils.train_utils import scan_train
+from utils.evaluate_utils import get_predictions, hungarian_evaluate, umcl_evaluate
+from utils.train_utils import umcl_train
 
 FLAGS = argparse.ArgumentParser(description='SCAN Loss')
 FLAGS.add_argument('--config_env', help='Location of path config file')
@@ -113,7 +113,7 @@ def main():
 
         # Train
         print('Train ...')
-        scan_train(train_dataloader, model, simpred_model, criterion, optimizer,
+        umcl_train(train_dataloader, model, simpred_model, criterion, optimizer,
                    epoch, writer, p['update_cluster_head_only'])
 
         # Evaluate 
@@ -121,10 +121,10 @@ def main():
         predictions = get_predictions(p, val_dataloader, model)
 
         print('Evaluate based on similarity accuracy')
-        scan_stats = contrastive_evaluate(p, val_dataloader, model, simpred_model)
-        print(scan_stats)
-        highest_acc_head = scan_stats['highest_acc_head']
-        highest_acc = scan_stats['highest_acc']
+        stats = umcl_evaluate(p, val_dataloader, model, simpred_model)
+        print(stats)
+        highest_acc_head = stats['highest_acc_head']
+        highest_acc = stats['highest_acc']
 
         if highest_acc > best_acc:
             print('New highest accuracy on validation set: %.4f -> %.4f' % (best_acc, highest_acc))
@@ -149,7 +149,7 @@ def main():
                    p['scan_checkpoint'])
 
     # Evaluate and save the final model
-    print(colored('Evaluate best model based on SCAN metric at the end', 'blue'))
+    print(colored('Evaluate best model based on similarity accuracy at the end', 'blue'))
     model_checkpoint = torch.load(p['scan_model'], map_location='cpu')
     model.module.load_state_dict(model_checkpoint['model'])
     predictions, features, thumbnails = get_predictions(p, val_dataloader, model,
