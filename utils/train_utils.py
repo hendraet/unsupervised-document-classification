@@ -59,7 +59,7 @@ def scan_train(train_loader, model, criterion, optimizer, epoch, writer, update_
     for i, batch in enumerate(train_loader):
         # Forward pass
         anchors = batch['anchor'].cuda(non_blocking=True)
-        neighbors = batch['neighbor'].cuda(non_blocking=True)
+        neighbors = batch['query'].cuda(non_blocking=True)
 
         if update_cluster_head_only:  # Only calculate gradient for backprop of linear layer
             with torch.no_grad():
