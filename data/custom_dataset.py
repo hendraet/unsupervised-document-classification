@@ -82,12 +82,6 @@ class NeighborsDataset(Dataset):
         if self.use_simpred:
             query_index = np.random.randint(len(self))
             label = 0  # Placeholder, simpred output will be used instead
-
-            # Also fetch a neighbor
-            neighbor_index = np.random.choice(self.knn_indices[index])
-            neighbor = self.dataset.__getitem__(neighbor_index)
-            neighbor['image'] = self.neighbor_transform(neighbor['image'])
-            output['neighbor'] = neighbor['image']
         elif self.negative_indices is None:
             query_index = np.random.choice(self.knn_indices[index])
             label = 1

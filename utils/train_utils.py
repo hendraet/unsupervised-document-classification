@@ -118,11 +118,8 @@ def umcl_train(train_loader, model, simpred_model, criterion, optimizer, epoch, 
         labels = batch['label'].cuda(non_blocking=True)
 
         if simpred_model is not None:
-            neighbors = batch['neighbor'].cuda(non_blocking=True)
             simpred = simpred_model(anchors, queries)[0]
             labels = (simpred > 0.5).float()
-
-            queries[labels == 1.0] = neighbors[labels == 1.0]
 
         if update_cluster_head_only:  # Only calculate gradient for backprop of linear layer
             with torch.no_grad():
