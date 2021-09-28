@@ -110,12 +110,13 @@ def xentropy(x, target, input_as_probabilities):
 
 
 class SCANLoss(nn.Module):
-    def __init__(self, target=None, entropy_weight=2.0, contrastive=False):
+    def __init__(self, target=None, entropy_weight=2.0, contrastive=False, transitive=False):
         super(SCANLoss, self).__init__()
         self.softmax = nn.Softmax(dim=1)
         self.bce = nn.BCELoss()
         self.entropy_weight = entropy_weight  # Default = 2.0
         self.contrastive = contrastive
+        self.transitive = transitive
 
         if target is not None:
             self.target = torch.FloatTensor(target).cuda()
@@ -137,12 +138,14 @@ class SCANLoss(nn.Module):
 
             mcl_loss = self.bce(similarity.flatten(), labels.flatten())
 
-            target = torch.matmul(anchors_prob, anchors_prob.T)
-            target.fill_diagonal_(1.0)
+            if self.transitive:
+                target = torch.matmul(anchors_prob, anchors_prob.T)
+                target.fill_diagonal_(1.0)
 
-            transitive_loss = self.bce(similarity.flatten(), target.detach().flatten())
-
-            consistency_loss = mcl_loss + transitive_loss
+                transitive_loss = self.bce(similarity.flatten(), target.detach().flatten())
+                consistency_loss = mcl_loss + transitive_loss
+            else:
+                consistency_loss = mcl_loss
         else:
             b, n = anchors_prob.shape
             similarity = torch.bmm(anchors_prob.view(b, 1, n), positives_prob.view(b, n, 1)).squeeze()
