@@ -89,7 +89,7 @@ class MemoryBank(object):
             return negative_indices
 
     def mine_negatives(self, k, calculate_accuracy=True):
-        # mine k negatives  for every sample
+        # mine k negatives for every sample
         features = self.features.cpu().numpy()
 
         sample_indices = np.random.randint(0, features.shape[0], (features.shape[0], 2))
@@ -104,7 +104,7 @@ class MemoryBank(object):
             new_indices = np.random.randint(0, features.shape[0], (features.shape[0], k))
             negative_okay = np.zeros((new_indices.shape), dtype=bool)
 
-            for i in range(0, k, step):
+            for i in range(0, features.shape[0], step):
                 negative_okay[i:i+step, :] = np.linalg.norm(features[i:i+step, np.newaxis, :] - features[new_indices[i:i+step, :], :], axis=2) > med
 
             # negative_okay = np.linalg.norm(features[:, np.newaxis, :] - features[new_indices, :], axis=2) > med
