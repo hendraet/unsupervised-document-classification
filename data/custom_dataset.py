@@ -46,7 +46,7 @@ class AugmentedDataset(Dataset):
     Returns an image with one of its neighbors.
 """
 class NeighborsDataset(Dataset):
-    def __init__(self, dataset, knn_indices, negative_indices=None, use_simpred=False, num_neighbors=None):
+    def __init__(self, dataset, knn_indices, negative_indices=None, use_simpred=False, num_neighbors=None, num_negatives=None):
         super(NeighborsDataset, self).__init__()
         transform = dataset.transform
         
@@ -62,16 +62,16 @@ class NeighborsDataset(Dataset):
         self.knn_indices = knn_indices  # Nearest neighbor indices (np.array  [len(dataset) x k])
         self.negative_indices = negative_indices  # Negative indices (np.array  [len(dataset) x k])
 
-        if self.negative_indices is not None:
-            self.positive_ratio = self.knn_indices.shape[1] / (self.knn_indices.shape[1] + self.negative_indices.shape[1])
-            if num_neighbors is not None:
-                self.negative_indices = self.negative_indices[:, :num_neighbors + 1]
-            assert (self.negative_indices.shape[0] == len(self.dataset))
-
         self.use_simpred = use_simpred
         if num_neighbors is not None:
             self.knn_indices = self.knn_indices[:, :num_neighbors + 1]
         assert (self.knn_indices.shape[0] == len(self.dataset))
+
+        if self.negative_indices is not None:
+            if num_neighbors is not None:
+                self.negative_indices = self.negative_indices[:, :num_neighbors + 1]
+            self.positive_ratio = self.knn_indices.shape[1] / (self.knn_indices.shape[1] + self.negative_indices.shape[1])
+            assert (self.negative_indices.shape[0] == len(self.dataset))
 
     def __len__(self):
         return len(self.dataset)

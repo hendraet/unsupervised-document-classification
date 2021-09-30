@@ -190,10 +190,12 @@ def get_train_dataset(p, transform, to_augmented_dataset=False, to_neighbors_dat
 
         if use_negatives:
             kfn_indices = np.load(p['topk_furthest_train_path'])
+            num_negatives = p['num_negatives']
         else:
             kfn_indices = None
+            num_negatives = None
 
-        dataset = NeighborsDataset(dataset, knn_indices, kfn_indices, use_simpred, p['num_neighbors'])
+        dataset = NeighborsDataset(dataset, knn_indices, kfn_indices, use_simpred, p['num_neighbors'], num_negatives)
     elif to_similarity_dataset:  # Dataset returns an image and another random image.
         from data.custom_dataset import SimilarityDataset
         dataset = SimilarityDataset(dataset)
@@ -244,7 +246,7 @@ def get_val_dataset(p, transform=None, to_neighbors_dataset=False, to_similarity
         else:
             kfn_indices = None
 
-        dataset = NeighborsDataset(dataset, knn_indices, kfn_indices, use_simpred, 5) # Only use 5
+        dataset = NeighborsDataset(dataset, knn_indices, kfn_indices, use_simpred, 5, 5) # Only use 5
     elif to_similarity_dataset:  # Dataset returns an image and another random image.
         from data.custom_dataset import SimilarityDataset
         dataset = SimilarityDataset(dataset)

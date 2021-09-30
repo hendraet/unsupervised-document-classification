@@ -99,7 +99,7 @@ class MemoryBank(object):
 
         step = 5
 
-        for _ in range(100):
+        for _ in range(20):
             new_indices = np.random.randint(0, features.shape[0], (features.shape[0], k))
             negative_okay = np.zeros((new_indices.shape), dtype=bool)
 

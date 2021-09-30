@@ -1,0 +1,27 @@
+# Setup
+setup: moco # MoCo is used here
+
+# Model
+backbone: resnet50
+pretrained: ./pretrained/moco_hdi_balanced_5000.pth.tar
+model_kwargs:
+   head: mlp
+   features_dim: 128
+
+# Dataset
+train_db_name: hdi_balanced
+val_db_name: hdi_balanced
+num_classes: 7
+temperature: 0.07
+compute_negatives: True
+
+# Batch size and workers
+batch_size: 128
+num_workers: 8
+
+# Transformations
+transformation_kwargs:
+   crop_size: 224
+   normalize:
+      mean: [0.7608, 0.7517, 0.7362]
+      std: [0.2370, 0.2385, 0.2395]
