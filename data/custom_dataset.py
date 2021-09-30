@@ -81,19 +81,19 @@ class NeighborsDataset(Dataset):
 
         if self.use_simpred:
             query_index = np.random.randint(len(self))
-            label = 0  # Placeholder, simpred output will be used instead
+            label = 0.0  # Placeholder, simpred output will be used instead
         elif self.negative_indices is None:
             query_index = np.random.choice(self.knn_indices[index])
-            label = 1
+            label = 1.0
         else:
             rand = np.random.random_sample()
             # Decide whether to sample a positive or a negative
             if rand < self.positive_ratio:
                 query_index = np.random.choice(self.knn_indices[index])
-                label = 1
+                label = 1.0
             else:
                 query_index = np.random.choice(self.negative_indices[index])
-                label = 0
+                label = 0.0
 
         anchor = self.dataset.__getitem__(index)
         anchor['image'] = self.anchor_transform(anchor['image'])
