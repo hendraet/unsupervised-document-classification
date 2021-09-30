@@ -97,7 +97,7 @@ class MemoryBank(object):
         med = np.median(distances)
         negative_indices = np.random.randint(0, features.shape[0], (features.shape[0], k))
 
-        step = 20
+        step = 1000
 
         for iter in range(20):
             print(iter)
@@ -105,7 +105,7 @@ class MemoryBank(object):
             negative_okay = np.zeros((new_indices.shape), dtype=bool)
 
             for i in range(0, k, step):
-                negative_okay[:, i:i+step] = np.linalg.norm(features[:, np.newaxis, :] - features[new_indices[:, i:i+step], :], axis=2) > med
+                negative_okay[i:i+step, :] = np.linalg.norm(features[i:i+step, np.newaxis, :] - features[new_indices[i:i+step, :], :], axis=2) > med
 
             # negative_okay = np.linalg.norm(features[:, np.newaxis, :] - features[new_indices, :], axis=2) > med
 
