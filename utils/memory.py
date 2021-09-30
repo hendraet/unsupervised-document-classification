@@ -97,9 +97,10 @@ class MemoryBank(object):
         med = np.median(distances)
         negative_indices = np.random.randint(0, features.shape[0], (features.shape[0], k))
 
-        step = 5
+        step = 1000
 
-        for _ in range(20):
+        for iter in range(20):
+            print(iter)
             new_indices = np.random.randint(0, features.shape[0], (features.shape[0], k))
             negative_okay = np.zeros((new_indices.shape), dtype=bool)
 
