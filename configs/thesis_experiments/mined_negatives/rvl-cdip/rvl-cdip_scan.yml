@@ -7,6 +7,7 @@ criterion: mcl
 # Weight update
 update_cluster_head_only: False # Update full network in SCAN
 num_heads: 1 # Only use one head
+use_simpred_model: False
 
 # Model
 backbone: resnet50
