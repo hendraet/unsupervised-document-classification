@@ -99,6 +99,38 @@ def scan_train(train_loader, model, criterion, optimizer, epoch, writer, update_
             progress.display(i)
 
 
+def supervised_train(train_loader, model, criterion, optimizer, epoch, writer):
+    """
+    Train w/ Cross-Entropy Loss
+    """
+    losses = AverageMeter('Loss', ':.4e')
+    progress = ProgressMeter(len(train_loader), [losses], prefix="Epoch: [{}]".format(epoch))
+
+    model.train()  # Update BN
+
+    for i, batch in enumerate(train_loader):
+        # Forward pass
+        images = batch['image'].cuda(non_blocking=True)
+        targets = batch['target'].cuda(non_blocking=True)
+
+        outputs = model(images)[0]
+
+        log_outputs = outputs.log()
+        loss = criterion(log_outputs, targets)
+        num_classes = log_outputs.shape[1]
+        writer.add_scalar('Train/Loss/Head-%d' % num_classes, loss.item(), epoch * len(train_loader) + i)
+
+        # Register the loss and backprop
+        losses.update(loss.item())
+
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        if i % 25 == 0:
+            progress.display(i)
+
+
 def umcl_train(train_loader, model, simpred_model, criterion, optimizer, epoch, writer, update_cluster_head_only=False):
     """ 
     Train w/ SCAN-Loss

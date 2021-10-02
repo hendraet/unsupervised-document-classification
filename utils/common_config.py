@@ -32,6 +32,9 @@ def get_criterion(p):
     elif p['criterion'] == 'binary-cross-entropy':
         criterion = torch.nn.BCELoss()
 
+    elif p['criterion'] == 'categorical-cross-entropy':
+        criterion = torch.nn.NLLLoss()
+
     else:
         raise ValueError('Invalid criterion {}'.format(p['criterion']))
 

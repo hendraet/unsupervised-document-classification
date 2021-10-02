@@ -187,7 +187,7 @@ def umcl_evaluate(p, dataloader, model, simpred_model):
 
 
 @torch.no_grad()
-def simpred_evaluate(predictions, writer, epoch):
+def simpred_evaluate(predictions, writer=None, epoch=None):
     # Evaluate model based on classification metrics.
     head = predictions[0]  # There will always be just one head
 
@@ -198,11 +198,30 @@ def simpred_evaluate(predictions, writer, epoch):
     precision = metrics.precision_score(targets, preds)
     recall = metrics.recall_score(targets, preds)
 
-    writer.add_scalar('Evaluate/Accuracy', accuracy, epoch)
-    writer.add_scalar('Evaluate/Precision', precision, epoch)
-    writer.add_scalar('Evaluate/Recall', recall, epoch)
+    if writer is not None:
+        writer.add_scalar('Evaluate/Accuracy', accuracy, epoch)
+        writer.add_scalar('Evaluate/Precision', precision, epoch)
+        writer.add_scalar('Evaluate/Recall', recall, epoch)
 
     output = {'accuracy': accuracy, 'precision': precision, 'recall': recall}
+
+    return {'scan': output, 'accuracy': accuracy}
+
+
+@torch.no_grad()
+def supervised_evaluate(predictions, writer=None, epoch=None):
+    # Evaluate model based on classification metrics.
+    head = predictions[0]  # There will always be just one head
+
+    preds = head['predictions']
+    targets = head['targets']
+
+    accuracy = metrics.accuracy_score(targets, preds)
+
+    if writer is not None:
+        writer.add_scalar('Evaluate/Accuracy', accuracy, epoch)
+
+    output = {'accuracy': accuracy}
 
     return {'scan': output, 'accuracy': accuracy}
 

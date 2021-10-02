@@ -1,0 +1,47 @@
+# setup
+setup: scan
+
+# Loss
+criterion: categorical-cross-entropy
+
+# Weight update
+num_heads: 1 # Only use one head
+
+# Model
+backbone: resnet50
+
+# Dataset
+train_db_name: hdi_imbalanced
+val_db_name: hdi_imbalanced
+num_classes: 7
+
+# Transformations
+augmentation_strategy: ours 
+augmentation_kwargs:
+   crop_size: 224
+   normalize:
+      mean: [0.7810, 0.7613, 0.7215]
+      std: [0.1826, 0.1844, 0.1873]
+   num_strong_augs: 4
+   cutout_kwargs:
+     n_holes: 1
+     length: 32
+     random: True
+
+transformation_kwargs:
+   crop_size: 224
+   normalize:
+      mean: [0.7810, 0.7613, 0.7215]
+      std: [0.1826, 0.1844, 0.1873]
+
+# Hyperparameters
+optimizer: adam
+optimizer_kwargs:
+   lr: 0.0001
+   weight_decay: 0.0001
+epochs: 100
+batch_size: 128
+num_workers: 8
+
+# Scheduler
+scheduler: constant

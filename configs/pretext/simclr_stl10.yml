@@ -11,6 +11,7 @@ model_kwargs:
 train_db_name: stl-10
 val_db_name: stl-10
 num_classes: 10
+compute_negatives: True
 
 # Loss
 criterion: simclr
