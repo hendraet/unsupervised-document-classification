@@ -20,7 +20,7 @@ class MaskedCrossEntropyLoss(nn.Module):
         b, c = input.size()
         n = target.size(0)
         input = torch.masked_select(input, mask.view(b, 1)).view(n, c)
-        return F.cross_entropy(input, target, weight=weight, reduction=reduction)
+        return F.nll_loss(input, target, weight=weight, reduction=reduction)
 
 
 class ConfidenceBasedCE(nn.Module):
@@ -31,7 +31,7 @@ class ConfidenceBasedCE(nn.Module):
         self.threshold = threshold
         self.apply_class_balancing = apply_class_balancing
 
-    def forward(self, anchors_weak, anchors_strong):
+    def forward(self, weak_anchors_prob, strong_anchors_prob):
         """
         Loss function during self-labeling
 
@@ -39,7 +39,6 @@ class ConfidenceBasedCE(nn.Module):
         output: cross entropy 
         """
         # Retrieve target and mask based on weakly augmentated anchors
-        weak_anchors_prob = self.softmax(anchors_weak)
         max_prob, target = torch.max(weak_anchors_prob, dim=1)
         mask = max_prob > self.threshold
         b, c = weak_anchors_prob.size()
@@ -47,7 +46,7 @@ class ConfidenceBasedCE(nn.Module):
         n = target_masked.size(0)
 
         # Inputs are strongly augmented anchors
-        input_ = anchors_strong
+        input_ = strong_anchors_prob.log()
 
         # Class balancing weights
         if self.apply_class_balancing:

@@ -36,7 +36,7 @@ def main():
 
     # Get model
     print(colored('Retrieve model', 'blue'))
-    model = get_model(p, p['scan_checkpoint'])
+    model = get_model(p, p['scan_model'])
     print(model)
     model = torch.nn.DataParallel(model)
     model = model.cuda()
