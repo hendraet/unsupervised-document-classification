@@ -128,13 +128,13 @@ def get_model(p, pretrain_path=None, load_simpred=False):
             # We only continue with the best head (pop all heads first, then copy back the best head)
             model_state = state['model']
             all_heads = [k for k in model_state.keys() if 'cluster_head' in k]
-            best_head_weight = model_state['cluster_head.%d.weight' %(state['head'])]
-            best_head_bias = model_state['cluster_head.%d.bias' %(state['head'])]
+            best_head_weight = model_state['cluster_head.%d.0.weight' %(state['head'])]
+            best_head_bias = model_state['cluster_head.%d.0.bias' %(state['head'])]
             for k in all_heads:
                 model_state.pop(k)
 
-            model_state['cluster_head.0.weight'] = best_head_weight
-            model_state['cluster_head.0.bias'] = best_head_bias
+            model_state['cluster_head.0.0.weight'] = best_head_weight
+            model_state['cluster_head.0.0.bias'] = best_head_bias
             missing = model.load_state_dict(model_state, strict=True)
 
         else:
