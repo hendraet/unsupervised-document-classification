@@ -1,5 +1,6 @@
 """
 Authors: Wouter Van Gansbeke, Simon Vandenhende
+Modified by Jona Otholt
 Licensed under the CC BY-NC 4.0 license (https://creativecommons.org/licenses/by-nc/4.0/)
 """
 import numpy as np
@@ -63,30 +64,6 @@ class MemoryBank(object):
         
         else:
             return indices
-
-    def mine_negatives_old(self, k, num_classes, calculate_accuracy=True):
-        from sklearn.cluster import KMeans
-
-        features = self.features.cpu().numpy()
-        kmeans = KMeans(n_clusters=num_classes).fit_predict(features)
-
-        sample_indices = np.arange(features.shape[0])
-        negative_indices = np.zeros((features.shape[0], k), dtype=np.int)
-        for i in range(num_classes):
-            negatives = sample_indices[kmeans != i]
-            shape = sample_indices[kmeans == i].shape[0], k
-            negative_indices[kmeans == i] = np.random.choice(negatives, shape)
-
-        # evaluate
-        if calculate_accuracy:
-            targets = self.targets.cpu().numpy()
-            neighbor_targets = np.take(targets, negative_indices[:, ], axis=0)
-            anchor_targets = np.repeat(targets.reshape(-1, 1), k, axis=1)
-            accuracy = np.mean(neighbor_targets != anchor_targets)
-            return negative_indices, accuracy
-
-        else:
-            return negative_indices
 
     def mine_negatives(self, k, calculate_accuracy=True):
         # mine k negatives for every sample
