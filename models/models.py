@@ -1,5 +1,6 @@
 """
 Authors: Wouter Van Gansbeke, Simon Vandenhende
+Modified by Jona Otholt
 Licensed under the CC BY-NC 4.0 license (https://creativecommons.org/licenses/by-nc/4.0/)
 """
 import torch
@@ -39,7 +40,8 @@ class ClusteringModel(nn.Module):
         self.nheads = nheads
         assert(isinstance(self.nheads, int))
         assert(self.nheads > 0)
-        self.cluster_head = nn.ModuleList([nn.Linear(self.backbone_dim, nclusters) for _ in range(self.nheads)])
+        heads = [nn.Sequential(nn.Linear(self.backbone_dim, nclusters), nn.Softmax(dim=-1)) for _ in range(self.nheads)]
+        self.cluster_head = nn.ModuleList(heads)
 
     def forward(self, x, forward_pass='default'):
         if forward_pass == 'default':
@@ -58,5 +60,47 @@ class ClusteringModel(nn.Module):
         
         else:
             raise ValueError('Invalid forward pass {}'.format(forward_pass))        
+
+        return out
+
+
+class SimpredModel(nn.Module):
+    def __init__(self, backbone, hidden_dim=512):
+        super(SimpredModel, self).__init__()
+        self.backbone = backbone['backbone']
+        self.backbone_dim = backbone['dim']
+        self.cluster_head = nn.Sequential(nn.Linear(self.backbone_dim * 2, hidden_dim),
+                                          nn.ReLU(),
+                                          nn.Linear(hidden_dim, 1),
+                                          nn.Sigmoid())
+
+    def forward(self, x1, x2, forward_pass='default'):
+        if forward_pass == 'default':
+            features1 = self.backbone(x1)
+            features2 = self.backbone(x2)
+
+            concatenated = torch.cat((features1, features2), dim=1)
+
+            out = [self.cluster_head(concatenated).squeeze()]
+
+        elif forward_pass == 'backbone':
+            features1 = self.backbone(x1)
+            features2 = self.backbone(x2)
+            out = features1, features2
+
+        elif forward_pass == 'head':
+            concatenated = torch.cat((x1, x2), dim=1)
+            out = [self.cluster_head(concatenated).squeeze()]
+
+        elif forward_pass == 'return_all':
+            features1 = self.backbone(x1)
+            features2 = self.backbone(x2)
+
+            concatenated = torch.cat((features1, features2), dim=1)
+
+            out = {'features': (features1, features2), 'output': [self.cluster_head(concatenated).squeeze()]}
+
+        else:
+            raise ValueError('Invalid forward pass {}'.format(forward_pass))
 
         return out

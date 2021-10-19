@@ -1,5 +1,6 @@
 """
 Authors: Wouter Van Gansbeke, Simon Vandenhende
+Modified by Jona Otholt
 Licensed under the CC BY-NC 4.0 license (https://creativecommons.org/licenses/by-nc/4.0/)
 """
 import argparse
@@ -101,7 +102,7 @@ def main():
         print('Train ...')
         scan_train(train_dataloader, model, criterion, optimizer, epoch, writer, p['update_cluster_head_only'])
 
-        # Evaluate 
+        # Evaluate
         print('Make prediction on validation set ...')
         predictions = get_predictions(p, val_dataloader, model)
 

@@ -1,5 +1,6 @@
 """
 Authors: Wouter Van Gansbeke, Simon Vandenhende
+Modified by Jona Otholt
 Licensed under the CC BY-NC 4.0 license (https://creativecommons.org/licenses/by-nc/4.0/)
 """
 import os
@@ -21,9 +22,19 @@ def get_criterion(p):
         from losses.losses import SCANLoss
         criterion = SCANLoss(**p['criterion_kwargs'])
 
+    elif p['criterion'] == 'mcl':
+        from losses.losses import MCLLoss
+        criterion = MCLLoss()
+
     elif p['criterion'] == 'confidence-cross-entropy':
         from losses.losses import ConfidenceBasedCE
         criterion = ConfidenceBasedCE(p['confidence_threshold'], p['criterion_kwargs']['apply_class_balancing'])
+
+    elif p['criterion'] == 'binary-cross-entropy':
+        criterion = torch.nn.BCELoss()
+
+    elif p['criterion'] == 'categorical-cross-entropy':
+        criterion = torch.nn.NLLLoss()
 
     else:
         raise ValueError('Invalid criterion {}'.format(p['criterion']))
@@ -42,7 +53,7 @@ def get_feature_dimensions_backbone(p):
         raise NotImplementedError
 
 
-def get_model(p, pretrain_path=None):
+def get_model(p, pretrain_path=None, load_simpred=False):
     # Get backbone
     if p['backbone'] == 'resnet18':
         if p['train_db_name'] in ['cifar-10', 'cifar-20']:
@@ -85,6 +96,10 @@ def get_model(p, pretrain_path=None):
         from models.models import ContrastiveModel
         model = ContrastiveModel(backbone, **p['model_kwargs'])
 
+    elif p['setup'] == 'simpred' or load_simpred:
+        from models.models import SimpredModel
+        model = SimpredModel(backbone, p['hidden_dim'])
+
     elif p['setup'] in ['scan', 'selflabel']:
         from models.models import ClusteringModel
         if p['setup'] == 'selflabel':
@@ -97,8 +112,12 @@ def get_model(p, pretrain_path=None):
     # Load pretrained weights
     if pretrain_path is not None and os.path.exists(pretrain_path):
         state = torch.load(pretrain_path, map_location='cpu')
-        
-        if p['setup'] == 'scan': # Weights are supposed to be transfered from contrastive training
+
+        if load_simpred:
+            missing = model.load_state_dict(state['model'], strict=False)
+            assert (len(missing.missing_keys) == len(missing.unexpected_keys) == 0)
+
+        elif p['setup'] in ['scan', 'simpred']: # Weights are supposed to be transfered from contrastive training
             missing = model.load_state_dict(state, strict=False)
             assert(set(missing[1]) == {
                 'contrastive_head.0.weight', 'contrastive_head.0.bias', 
@@ -110,13 +129,13 @@ def get_model(p, pretrain_path=None):
             # We only continue with the best head (pop all heads first, then copy back the best head)
             model_state = state['model']
             all_heads = [k for k in model_state.keys() if 'cluster_head' in k]
-            best_head_weight = model_state['cluster_head.%d.weight' %(state['head'])]
-            best_head_bias = model_state['cluster_head.%d.bias' %(state['head'])]
+            best_head_weight = model_state['cluster_head.%d.0.weight' %(state['head'])]
+            best_head_bias = model_state['cluster_head.%d.0.bias' %(state['head'])]
             for k in all_heads:
                 model_state.pop(k)
 
-            model_state['cluster_head.0.weight'] = best_head_weight
-            model_state['cluster_head.0.bias'] = best_head_bias
+            model_state['cluster_head.0.0.weight'] = best_head_weight
+            model_state['cluster_head.0.0.bias'] = best_head_bias
             missing = model.load_state_dict(model_state, strict=True)
 
         else:
@@ -131,8 +150,8 @@ def get_model(p, pretrain_path=None):
     return model
 
 
-def get_train_dataset(p, transform, to_augmented_dataset=False,
-                        to_neighbors_dataset=False, split=None):
+def get_train_dataset(p, transform, to_augmented_dataset=False, to_neighbors_dataset=False,
+                      to_similarity_dataset=False, split=None, use_negatives=False, use_simpred=False):
     # Base dataset
     if p['train_db_name'] == 'cifar-10':
         from data.cifar import CIFAR10
@@ -165,19 +184,31 @@ def get_train_dataset(p, transform, to_augmented_dataset=False,
         raise ValueError('Invalid train dataset {}'.format(p['train_db_name']))
     
     # Wrap into other dataset (__getitem__ changes)
-    if to_augmented_dataset: # Dataset returns an image and an augmentation of that image.
+    if to_augmented_dataset:  # Dataset returns an image and an augmentation of that image.
         from data.custom_dataset import AugmentedDataset
         dataset = AugmentedDataset(dataset)
 
-    if to_neighbors_dataset: # Dataset returns an image and one of its nearest neighbors.
+    if to_neighbors_dataset:  # Dataset returns an image and one of its nearest neighbors.
         from data.custom_dataset import NeighborsDataset
-        indices = np.load(p['topk_neighbors_train_path'])
-        dataset = NeighborsDataset(dataset, indices, p['num_neighbors'])
+        knn_indices = np.load(p['topk_neighbors_train_path'])
+
+        if use_negatives:
+            kfn_indices = np.load(p['topk_furthest_train_path'])
+            num_negatives = p['num_negatives']
+        else:
+            kfn_indices = None
+            num_negatives = None
+
+        dataset = NeighborsDataset(dataset, knn_indices, kfn_indices, use_simpred, p['num_neighbors'], num_negatives)
+    elif to_similarity_dataset:  # Dataset returns an image and another random image.
+        from data.custom_dataset import SimilarityDataset
+        dataset = SimilarityDataset(dataset)
     
     return dataset
 
 
-def get_val_dataset(p, transform=None, to_neighbors_dataset=False):
+def get_val_dataset(p, transform=None, to_neighbors_dataset=False, to_similarity_dataset=False,
+                    use_negatives=False, use_simpred=False):
     # Base dataset
     if p['val_db_name'] == 'cifar-10':
         from data.cifar import CIFAR10
@@ -212,21 +243,30 @@ def get_val_dataset(p, transform=None, to_neighbors_dataset=False):
     # Wrap into other dataset (__getitem__ changes) 
     if to_neighbors_dataset: # Dataset returns an image and one of its nearest neighbors.
         from data.custom_dataset import NeighborsDataset
-        indices = np.load(p['topk_neighbors_val_path'])
-        dataset = NeighborsDataset(dataset, indices, 5) # Only use 5
+        knn_indices = np.load(p['topk_neighbors_val_path'])
+
+        if use_negatives:
+            kfn_indices = np.load(p['topk_furthest_val_path'])
+        else:
+            kfn_indices = None
+
+        dataset = NeighborsDataset(dataset, knn_indices, kfn_indices, use_simpred, 5, 5) # Only use 5
+    elif to_similarity_dataset:  # Dataset returns an image and another random image.
+        from data.custom_dataset import SimilarityDataset
+        dataset = SimilarityDataset(dataset)
 
     return dataset
 
 
 def get_train_dataloader(p, dataset):
     return torch.utils.data.DataLoader(dataset, num_workers=p['num_workers'], 
-            batch_size=p['batch_size'], pin_memory=True, collate_fn=collate_custom,
+            batch_size=p['batch_size'], pin_memory=False, collate_fn=collate_custom,
             drop_last=True, shuffle=True)
 
 
 def get_val_dataloader(p, dataset):
     return torch.utils.data.DataLoader(dataset, num_workers=p['num_workers'],
-            batch_size=p['batch_size'], pin_memory=True, collate_fn=collate_custom,
+            batch_size=p['batch_size'], pin_memory=False, collate_fn=collate_custom,
             drop_last=False, shuffle=False)
 
 
@@ -285,7 +325,7 @@ def get_optimizer(p, model, cluster_head_only=False):
                 else:
                     param.requires_grad = False 
         params = list(filter(lambda p: p.requires_grad, model.parameters()))
-        assert(len(params) == 2 * p['num_heads'])
+        # assert(len(params) == 2 * p['num_heads'])
 
     else:
         params = model.parameters()

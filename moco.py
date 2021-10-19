@@ -1,5 +1,6 @@
 """
 Authors: Wouter Van Gansbeke, Simon Vandenhende
+Modified by Jona Otholt
 Licensed under the CC BY-NC 4.0 license (https://creativecommons.org/licenses/by-nc/4.0/)
 """
 import argparse
@@ -94,9 +95,15 @@ def main():
     transforms = get_val_transformations(p)
     train_dataset = get_train_dataset(p, transforms)
     fill_memory_bank(train_dataloader, model, memory_bank_train)
-    indices, acc = memory_bank_train.mine_nearest_neighbors(topk)
-    print('Accuracy of top-%d nearest neighbors on train set is %.2f' % (topk, 100 * acc))
-    np.save(p['topk_neighbors_train_path'], indices)
+    knn_indices, knn_acc = memory_bank_train.mine_nearest_neighbors(topk)
+    print('Accuracy of top-%d nearest neighbors on train set is %.2f' % (topk, 100 * knn_acc))
+    np.save(p['topk_neighbors_train_path'], knn_indices)
+
+    if p['compute_negatives']:
+        topk = 350
+        kfn_indices, kfn_acc = memory_bank_train.mine_negatives(topk)
+        print('Accuracy of top-%d furthest neighbors on train set is %.2f' % (topk, 100 * kfn_acc))
+        np.save(p['topk_furthest_train_path'], kfn_indices)
 
     # Mine the topk nearest neighbors (Validation)
     # These will be used for validation.
@@ -104,9 +111,14 @@ def main():
     print(colored('Mine the nearest neighbors (Val)(Top-%d)' % (topk), 'blue'))
     fill_memory_bank(val_dataloader, model, memory_bank_val)
     print('Mine the neighbors')
-    indices, acc = memory_bank_val.mine_nearest_neighbors(topk)
-    print('Accuracy of top-%d nearest neighbors on val set is %.2f' % (topk, 100 * acc))
-    np.save(p['topk_neighbors_val_path'], indices)
+    knn_indices, knn_acc = memory_bank_val.mine_nearest_neighbors(topk)
+    print('Accuracy of top-%d nearest neighbors on val set is %.2f' % (topk, 100 * knn_acc))
+    np.save(p['topk_neighbors_val_path'], knn_indices)
+
+    if p['compute_negatives']:
+        kfn_indices, kfn_acc = memory_bank_val.mine_negatives(topk)
+        print('Accuracy of top-%d furthest neighbors on val set is %.2f' % (topk, 100 * kfn_acc))
+        np.save(p['topk_furthest_val_path'], kfn_indices)
 
 
 if __name__ == '__main__':

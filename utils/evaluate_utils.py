@@ -1,5 +1,6 @@
 """
 Authors: Wouter Van Gansbeke, Simon Vandenhende
+Modified by Jona Otholt
 Licensed under the CC BY-NC 4.0 license (https://creativecommons.org/licenses/by-nc/4.0/)
 """
 import numpy as np
@@ -45,7 +46,7 @@ def get_predictions(p, dataloader, model, return_features=False, return_thumbnai
     if return_thumbnails:
         thumbnails = torch.zeros((len(dataloader.sampler), 3, 64, 64)).cuda()
     
-    if isinstance(dataloader.dataset, NeighborsDataset): # Also return the neighbors
+    if isinstance(dataloader.dataset, NeighborsDataset):  # Also return the neighbors
         key_ = 'anchor'
         include_neighbors = True
         neighbors = []
@@ -58,11 +59,19 @@ def get_predictions(p, dataloader, model, return_features=False, return_thumbnai
     for batch in dataloader:
         images = batch[key_].cuda(non_blocking=True)
         bs = images.shape[0]
-        res = model(images, forward_pass='return_all')
+
+        if p['setup'] == 'simpred':
+            images2 = batch['neighbor'].cuda(non_blocking=True)
+            res = model(images, images2, forward_pass='return_all')
+        else:
+            res = model(images, forward_pass='return_all')
         output = res['output']
 
         if return_features:
-            features[ptr: ptr+bs] = res['features']
+            if p['setup'] == 'simpred':
+                features[ptr: ptr+bs] = res['features'][0]
+            else:
+                features[ptr: ptr+bs] = res['features']
         if return_thumbnails:
             means = p['transformation_kwargs']['normalize']['mean']
             stds = p['transformation_kwargs']['normalize']['std']
@@ -73,13 +82,16 @@ def get_predictions(p, dataloader, model, return_features=False, return_thumbnai
             ptr += bs
 
         for i, output_i in enumerate(output):
-            predictions[i].append(torch.argmax(output_i, dim=1))
-            probs[i].append(F.softmax(output_i, dim=1))
+            if p['setup'] == 'simpred':
+                predictions[i].append((output_i > 0.5).double())
+            else:
+                predictions[i].append(torch.argmax(output_i, dim=1))
+            probs[i].append(output_i)
         targets.append(batch['target'])
         if include_neighbors:
             neighbors.append(batch['possible_neighbors'])
 
-    predictions = [torch.cat(pred_, dim = 0).cpu() for pred_ in predictions]
+    predictions = [torch.cat(pred_, dim=0).cpu() for pred_ in predictions]
     probs = [torch.cat(prob_, dim=0).cpu() for prob_ in probs]
     targets = torch.cat(targets, dim=0)
 
@@ -113,17 +125,17 @@ def scan_evaluate(predictions):
         # Entropy loss
         entropy_loss = entropy(torch.mean(probs, dim=0), input_as_probabilities=True).item()
 
-        # Consistency loss       
+        # Consistency loss
         similarity = torch.matmul(probs, probs.t())
         neighbors = neighbors.contiguous().view(-1)
         anchors = anchors.contiguous().view(-1)
         similarity = similarity[anchors, neighbors]
         ones = torch.ones_like(similarity)
         consistency_loss = F.binary_cross_entropy(similarity, ones).item()
-        
+
         # Total loss
         total_loss = - entropy_loss + consistency_loss
-        
+
         output.append({'entropy': entropy_loss, 'consistency': consistency_loss, 'total_loss': total_loss})
 
     total_losses = [output_['total_loss'] for output_ in output]
@@ -131,6 +143,88 @@ def scan_evaluate(predictions):
     lowest_loss = np.min(total_losses)
 
     return {'scan': output, 'lowest_loss_head': lowest_loss_head, 'lowest_loss': lowest_loss}
+
+
+@torch.no_grad()
+def umcl_evaluate(p, dataloader, model, simpred_model):
+    output = []
+    predictions = [[] for _ in range(p['num_heads'])]
+    targets = []
+
+    for batch in dataloader:
+        anchors = batch['anchor'].cuda(non_blocking=True)
+        queries = batch['query'].cuda(non_blocking=True)
+        labels = batch['label'].cuda(non_blocking=True)
+
+        if simpred_model is not None:
+            simpred = simpred_model(anchors, queries)[0]
+            labels = (simpred > 0.5).float()
+
+        targets.append(labels)
+
+        anchors_output = model(anchors)
+        neighbors_output = model(queries)
+
+        for i in range(p['num_heads']):
+            b, n = anchors_output[i].shape
+            similarity = torch.bmm(anchors_output[i].view(b, 1, n), neighbors_output[i].view(b, n, 1)).squeeze()
+            predictions[i].append((similarity > 0.5).double())
+
+    predictions = [torch.cat(pred_, dim=0).cpu() for pred_ in predictions]
+    targets = torch.cat(targets, dim=0).cpu()
+
+    for preds in predictions:
+        accuracy = metrics.accuracy_score(targets, preds)
+        precision = metrics.precision_score(targets, preds)
+        recall = metrics.recall_score(targets, preds)
+
+        output.append({'accuracy': accuracy, 'precision': precision, 'recall': recall})
+
+    accuracies = [output_['accuracy'] for output_ in output]
+    highest_acc_head = np.argmax(accuracies)
+    highest_acc = np.max(accuracies)
+
+    return {'stats': output, 'highest_acc_head': highest_acc_head, 'highest_acc': highest_acc}
+
+
+@torch.no_grad()
+def simpred_evaluate(predictions, writer=None, epoch=None):
+    # Evaluate model based on classification metrics.
+    head = predictions[0]  # There will always be just one head
+
+    preds = head['predictions']
+    targets = head['targets']
+
+    accuracy = metrics.accuracy_score(targets, preds)
+    precision = metrics.precision_score(targets, preds)
+    recall = metrics.recall_score(targets, preds)
+
+    if writer is not None:
+        writer.add_scalar('Evaluate/Accuracy', accuracy, epoch)
+        writer.add_scalar('Evaluate/Precision', precision, epoch)
+        writer.add_scalar('Evaluate/Recall', recall, epoch)
+
+    output = {'accuracy': accuracy, 'precision': precision, 'recall': recall}
+
+    return {'scan': output, 'accuracy': accuracy}
+
+
+@torch.no_grad()
+def supervised_evaluate(predictions, writer=None, epoch=None):
+    # Evaluate model based on classification metrics.
+    head = predictions[0]  # There will always be just one head
+
+    preds = head['predictions']
+    targets = head['targets']
+
+    accuracy = metrics.accuracy_score(targets, preds)
+
+    if writer is not None:
+        writer.add_scalar('Evaluate/Accuracy', accuracy, epoch)
+
+    output = {'accuracy': accuracy}
+
+    return {'scan': output, 'accuracy': accuracy}
 
 
 @torch.no_grad()

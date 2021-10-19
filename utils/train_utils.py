@@ -1,5 +1,6 @@
 """
 Authors: Wouter Van Gansbeke, Simon Vandenhende
+Modified by Jona Otholt
 Licensed under the CC BY-NC 4.0 license (https://creativecommons.org/licenses/by-nc/4.0/)
 """
 import torch
@@ -41,7 +42,7 @@ def simclr_train(train_loader, model, criterion, optimizer, epoch):
 
 
 def scan_train(train_loader, model, criterion, optimizer, epoch, writer, update_cluster_head_only=False):
-    """ 
+    """
     Train w/ SCAN-Loss
     """
     total_losses = AverageMeter('Total Loss', ':.4e')
@@ -59,7 +60,7 @@ def scan_train(train_loader, model, criterion, optimizer, epoch, writer, update_
     for i, batch in enumerate(train_loader):
         # Forward pass
         anchors = batch['anchor'].cuda(non_blocking=True)
-        neighbors = batch['neighbor'].cuda(non_blocking=True)
+        neighbors = batch['query'].cuda(non_blocking=True)
 
         if update_cluster_head_only:  # Only calculate gradient for backprop of linear layer
             with torch.no_grad():
@@ -90,6 +91,143 @@ def scan_train(train_loader, model, criterion, optimizer, epoch, writer, update_
         entropy_losses.update(np.mean([v.item() for v in entropy_loss]))
 
         total_loss = torch.sum(torch.stack(total_loss, dim=0))
+
+        optimizer.zero_grad()
+        total_loss.backward()
+        optimizer.step()
+
+        if i % 25 == 0:
+            progress.display(i)
+
+
+def supervised_train(train_loader, model, criterion, optimizer, epoch, writer):
+    """
+    Train w/ Cross-Entropy Loss
+    """
+    losses = AverageMeter('Loss', ':.4e')
+    progress = ProgressMeter(len(train_loader), [losses], prefix="Epoch: [{}]".format(epoch))
+
+    model.train()  # Update BN
+
+    for i, batch in enumerate(train_loader):
+        # Forward pass
+        images = batch['image'].cuda(non_blocking=True)
+        targets = batch['target'].cuda(non_blocking=True)
+
+        outputs = model(images)[0]
+
+        log_outputs = outputs.log()
+        loss = criterion(log_outputs, targets)
+        num_classes = log_outputs.shape[1]
+        writer.add_scalar('Train/Loss/Head-%d' % num_classes, loss.item(), epoch * len(train_loader) + i)
+
+        # Register the loss and backprop
+        losses.update(loss.item())
+
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        if i % 25 == 0:
+            progress.display(i)
+
+
+def umcl_train(train_loader, model, simpred_model, criterion, optimizer, epoch, writer, update_cluster_head_only=False):
+    """ 
+    Train w/ SCAN-Loss
+    """
+    losses = AverageMeter('Loss', ':.4e')
+    progress = ProgressMeter(len(train_loader), [losses], prefix="Epoch: [{}]".format(epoch))
+
+    if update_cluster_head_only:
+        model.eval()  # No need to update BN
+    else:
+        model.train()  # Update BN
+
+    for i, batch in enumerate(train_loader):
+        # Forward pass
+        anchors = batch['anchor'].cuda(non_blocking=True)
+        queries = batch['query'].cuda(non_blocking=True)
+        labels = batch['label'].cuda(non_blocking=True)
+
+        if simpred_model is not None:
+            simpred = simpred_model(anchors, queries)[0]
+            labels = (simpred > 0.5).float()
+
+        if update_cluster_head_only:  # Only calculate gradient for backprop of linear layer
+            with torch.no_grad():
+                anchors_features = model(anchors, forward_pass='backbone')
+                neighbors_features = model(queries, forward_pass='backbone')
+            anchors_output = model(anchors_features, forward_pass='head')
+            neighbors_output = model(neighbors_features, forward_pass='head')
+
+        else:  # Calculate gradient for backprop of complete network
+            anchors_output = model(anchors)
+            neighbors_output = model(queries)
+
+        # Loss for every head
+        loss = []
+        for anchors_output_subhead, neighbors_output_subhead in \
+                zip(anchors_output, neighbors_output):
+            loss_ = criterion(anchors_output_subhead, neighbors_output_subhead, labels)
+
+            loss.append(loss_)
+
+            num_classes = anchors_output_subhead.shape[1]
+            writer.add_scalar('Train/Loss/Head-%d' % num_classes, loss_.item(), epoch * len(train_loader) + i)
+
+        # Register the mean loss and backprop the total loss to cover all subheads
+        losses.update(np.mean([v.item() for v in loss]))
+
+        total_loss = torch.sum(torch.stack(loss, dim=0))
+
+        optimizer.zero_grad()
+        total_loss.backward()
+        optimizer.step()
+
+        if i % 25 == 0:
+            progress.display(i)
+
+
+def simpred_train(train_loader, model, criterion, optimizer, epoch, writer, update_cluster_head_only=False):
+    """
+    Train w/ SCAN-Loss
+    """
+    losses = AverageMeter('Loss', ':.4e')
+    progress = ProgressMeter(len(train_loader), [losses], prefix="Epoch: [{}]".format(epoch))
+
+    if update_cluster_head_only:
+        model.eval()  # No need to update BN
+    else:
+        model.train()  # Update BN
+
+    for i, batch in enumerate(train_loader):
+        # Forward pass
+        anchors = batch['image'].cuda(non_blocking=True)
+        neighbors = batch['neighbor'].cuda(non_blocking=True)
+        labels = batch['target'].cuda(non_blocking=True)
+
+        if update_cluster_head_only:  # Only calculate gradient for backprop of linear layer
+            with torch.no_grad():
+                anchors_features, neighbors_features = model(anchors, neighbors, forward_pass='backbone')
+            similarity_probs = model(anchors_features, neighbors_features, forward_pass='head')
+
+        else:  # Calculate gradient for backprop of complete network
+            similarity_probs = model(anchors, neighbors)
+
+        # Loss for every head
+        loss = []
+        for similarity in similarity_probs:
+            loss_ = criterion(similarity, labels)
+
+            loss.append(loss_)
+
+            writer.add_scalar('Train/Loss', loss_.item(), epoch * len(train_loader) + i)
+
+        # Register the mean loss and backprop the total loss to cover all subheads
+        losses.update(np.mean([v.item() for v in loss]))
+
+        total_loss = torch.sum(torch.stack(loss, dim=0))
 
         optimizer.zero_grad()
         total_loss.backward()

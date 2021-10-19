@@ -1,5 +1,6 @@
 """
 Authors: Wouter Van Gansbeke
+Modified by Jona Otholt
 Licensed under the CC BY-NC 4.0 license (https://creativecommons.org/licenses/by-nc/4.0/)
 """
 import argparse
@@ -85,6 +86,12 @@ def main():
     print('Accuracy of top-%d nearest neighbors on train set is %.2f' % (topk, 100 * knn_acc))
     np.save(p['topk_neighbors_train_path'], knn_indices)
 
+    if p['compute_negatives']:
+        topk = 200
+        kfn_indices, kfn_acc = memory_bank_base.mine_negatives(topk)
+        print('Accuracy of top-%d furthest neighbors on train set is %.2f' % (topk, 100 * kfn_acc))
+        np.save(p['topk_furthest_train_path'], kfn_indices)
+
     # Mine the topk nearest neighbors (Validation)
     # These will be used for validation.
     topk = 5
@@ -94,6 +101,11 @@ def main():
     knn_indices, knn_acc = memory_bank_val.mine_nearest_neighbors(topk)
     print('Accuracy of top-%d nearest neighbors on val set is %.2f' % (topk, 100 * knn_acc))
     np.save(p['topk_neighbors_val_path'], knn_indices)
+
+    if p['compute_negatives']:
+        kfn_indices, kfn_acc = memory_bank_val.mine_negatives(topk)
+        print('Accuracy of top-%d furthest neighbors on val set is %.2f' % (topk, 100 * kfn_acc))
+        np.save(p['topk_furthest_val_path'], kfn_indices)
 
  
 if __name__ == '__main__':

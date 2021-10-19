@@ -1,5 +1,6 @@
 """
 Authors: Wouter Van Gansbeke, Simon Vandenhende
+Modified by Jona Otholt
 Licensed under the CC BY-NC 4.0 license (https://creativecommons.org/licenses/by-nc/4.0/)
 """
 import numpy as np
@@ -56,13 +57,47 @@ class MemoryBank(object):
         # evaluate 
         if calculate_accuracy:
             targets = self.targets.cpu().numpy()
-            neighbor_targets = np.take(targets, indices[:,1:], axis=0) # Exclude sample itself for eval
-            anchor_targets = np.repeat(targets.reshape(-1,1), topk, axis=1)
+            neighbor_targets = np.take(targets, indices[:, 1:], axis=0) # Exclude sample itself for eval
+            anchor_targets = np.repeat(targets.reshape(-1, 1), topk, axis=1)
             accuracy = np.mean(neighbor_targets == anchor_targets)
             return indices, accuracy
         
         else:
             return indices
+
+    def mine_negatives(self, k, calculate_accuracy=True):
+        # mine k negatives for every sample
+        features = self.features.cpu().numpy()
+
+        sample_indices = np.random.randint(0, features.shape[0], (features.shape[0], 2))
+        distances = np.linalg.norm(features[sample_indices[:, 0]] - features[sample_indices[:, 1]], axis=1)
+        med = np.median(distances)
+        negative_indices = np.random.randint(0, features.shape[0], (features.shape[0], k))
+
+        step = 1000
+
+        for iter in range(20):
+            print(iter)
+            new_indices = np.random.randint(0, features.shape[0], (features.shape[0], k))
+            negative_okay = np.zeros((new_indices.shape), dtype=bool)
+
+            for i in range(0, features.shape[0], step):
+                negative_okay[i:i+step, :] = np.linalg.norm(features[i:i+step, np.newaxis, :] - features[new_indices[i:i+step, :], :], axis=2) > med
+
+            # negative_okay = np.linalg.norm(features[:, np.newaxis, :] - features[new_indices, :], axis=2) > med
+
+            negative_indices[negative_okay] = new_indices[negative_okay]
+
+        # evaluate
+        if calculate_accuracy:
+            targets = self.targets.cpu().numpy()
+            neighbor_targets = np.take(targets, negative_indices[:, ], axis=0)
+            anchor_targets = np.repeat(targets.reshape(-1, 1), k, axis=1)
+            accuracy = np.mean(neighbor_targets != anchor_targets)
+            return negative_indices, accuracy
+
+        else:
+            return negative_indices
 
     def reset(self):
         self.ptr = 0 

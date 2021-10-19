@@ -1,5 +1,6 @@
 """
 Authors: Wouter Van Gansbeke, Simon Vandenhende
+Modified by Jona Otholt
 Licensed under the CC BY-NC 4.0 license (https://creativecommons.org/licenses/by-nc/4.0/)
 """
 import torch
@@ -20,7 +21,7 @@ class MaskedCrossEntropyLoss(nn.Module):
         b, c = input.size()
         n = target.size(0)
         input = torch.masked_select(input, mask.view(b, 1)).view(n, c)
-        return F.cross_entropy(input, target, weight=weight, reduction=reduction)
+        return F.nll_loss(input, target, weight=weight, reduction=reduction)
 
 
 class ConfidenceBasedCE(nn.Module):
@@ -31,7 +32,7 @@ class ConfidenceBasedCE(nn.Module):
         self.threshold = threshold
         self.apply_class_balancing = apply_class_balancing
 
-    def forward(self, anchors_weak, anchors_strong):
+    def forward(self, weak_anchors_prob, strong_anchors_prob):
         """
         Loss function during self-labeling
 
@@ -39,7 +40,6 @@ class ConfidenceBasedCE(nn.Module):
         output: cross entropy 
         """
         # Retrieve target and mask based on weakly augmentated anchors
-        weak_anchors_prob = self.softmax(anchors_weak)
         max_prob, target = torch.max(weak_anchors_prob, dim=1)
         mask = max_prob > self.threshold
         b, c = weak_anchors_prob.size()
@@ -47,7 +47,7 @@ class ConfidenceBasedCE(nn.Module):
         n = target_masked.size(0)
 
         # Inputs are strongly augmented anchors
-        input_ = anchors_strong
+        input_ = strong_anchors_prob.log()
 
         # Class balancing weights
         if self.apply_class_balancing:
@@ -110,19 +110,66 @@ def xentropy(x, target, input_as_probabilities):
 
 
 class SCANLoss(nn.Module):
-    def __init__(self, target=None, entropy_weight=2.0, temperature=1.0):
+    def __init__(self, target=None, entropy_weight=2.0, contrastive=False, transitive=False):
         super(SCANLoss, self).__init__()
         self.softmax = nn.Softmax(dim=1)
         self.bce = nn.BCELoss()
         self.entropy_weight = entropy_weight  # Default = 2.0
-        self.temperature = temperature
+        self.contrastive = contrastive
+        self.transitive = transitive
 
         if target is not None:
             self.target = torch.FloatTensor(target).cuda()
         else:
             self.target = None
 
-    def forward(self, anchors, neighbors):
+    def forward(self, anchors_prob, positives_prob):
+        """
+        input:
+            - anchors_prob: probabilities for anchor images w/ shape [b, num_classes]
+            - positives_prob: probabilities for neighbor images w/ shape [b, num_classes]
+        output:
+            - Loss
+        """
+        if self.contrastive:
+            similarity = anchors_prob @ positives_prob.T
+            labels = torch.zeros_like(similarity)
+            labels.fill_diagonal_(1)
+
+            mcl_loss = self.bce(similarity.flatten(), labels.flatten())
+
+            if self.transitive:
+                target = torch.matmul(anchors_prob, anchors_prob.T)
+                target.fill_diagonal_(1.0)
+
+                transitive_loss = self.bce(similarity.flatten(), target.detach().flatten())
+                consistency_loss = mcl_loss + transitive_loss
+            else:
+                consistency_loss = mcl_loss
+        else:
+            b, n = anchors_prob.shape
+            similarity = torch.bmm(anchors_prob.view(b, 1, n), positives_prob.view(b, n, 1)).squeeze()
+            ones = torch.ones_like(similarity)
+            consistency_loss = self.bce(similarity, ones)
+
+        # Entropy loss
+        if self.target is not None:
+            entropy_loss = -1 * xentropy(torch.mean(anchors_prob, 0), self.target,  input_as_probabilities=True)
+        else:
+            entropy_loss = entropy(torch.mean(anchors_prob, 0), input_as_probabilities=True)
+
+        # Total loss
+        total_loss = consistency_loss - self.entropy_weight * entropy_loss
+
+        return total_loss, consistency_loss, entropy_loss
+
+
+class MCLLoss(nn.Module):
+    def __init__(self):
+        super(MCLLoss, self).__init__()
+        self.bce = nn.BCELoss(reduction='none')
+
+    def forward(self, anchors_prob, positives_prob, labels):
         """
         input:
             - anchors: logits for anchor images w/ shape [b, num_classes]
@@ -131,27 +178,16 @@ class SCANLoss(nn.Module):
         output:
             - Loss
         """
-        # Softmax
-        b, n = anchors.size()
-        anchors_prob = self.softmax(anchors)
-        positives_prob = self.softmax(neighbors)
 
         # Similarity in output space
+        b, n = anchors_prob.shape
+
+        # Positives
         similarity = torch.bmm(anchors_prob.view(b, 1, n), positives_prob.view(b, n, 1)).squeeze()
-        ones = torch.ones_like(similarity)
-        consistency_loss = self.bce(similarity, ones)
+        similarity = torch.clamp(similarity, min=1e-5, max=(1 - 1e-5))
+        loss = self.bce(similarity, labels)
 
-        # Entropy loss
-        if self.target is not None:
-            sharpened_anchors_prob = self.softmax(anchors / self.temperature)
-            entropy_loss = -1 * xentropy(torch.mean(sharpened_anchors_prob, 0), self.target,  input_as_probabilities=True)
-        else:
-            entropy_loss = entropy(torch.mean(anchors_prob, 0), input_as_probabilities=True)
-
-        # Total loss
-        total_loss = consistency_loss - self.entropy_weight * entropy_loss
-
-        return total_loss, consistency_loss, entropy_loss
+        return loss.mean()
 
 
 class SimCLRLoss(nn.Module):

@@ -1,0 +1,48 @@
+# setup
+setup: simpred
+
+# Loss
+criterion: binary-cross-entropy
+
+# Weight update
+update_cluster_head_only: False # Update full network
+num_heads: 1 # Useless option, here for compatibility
+hidden_dim: 512
+
+# Model
+backbone: resnet50
+
+# Dataset
+train_db_name: rvl-cdip
+val_db_name: rvl-cdip
+
+# Transformations
+augmentation_strategy: ours
+augmentation_kwargs:
+   crop_size: 224
+   normalize:
+      mean: [0.9176, 0.9176, 0.9176]
+      std: [0.1852, 0.1852, 0.1852]
+   num_strong_augs: 4
+   cutout_kwargs:
+     n_holes: 1
+     length: 32
+     random: True
+
+transformation_kwargs:
+   crop_size: 224
+   normalize:
+      mean: [0.9176, 0.9176, 0.9176]
+      std: [0.1852, 0.1852, 0.1852]
+
+# Hyperparameters
+optimizer: adam
+optimizer_kwargs:
+   lr: 0.0001
+   weight_decay: 0.0001
+epochs: 50
+batch_size: 128
+num_workers: 8
+
+# Scheduler
+scheduler: constant
