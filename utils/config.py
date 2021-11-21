@@ -8,7 +8,7 @@ from easydict import EasyDict
 from utils.utils import mkdir_if_missing
 
 
-def create_config(config_file_env, config_file_exp, tb_run):
+def create_config(config_file_env, config_file_exp, tb_run, make_dirs=True):
     # Config for environment path
     with open(config_file_env, 'r') as stream:
         root_dir = yaml.safe_load(stream)['root_dir']
@@ -25,8 +25,11 @@ def create_config(config_file_env, config_file_exp, tb_run):
     # Set paths for pretext task (These directories are needed in every stage)
     base_dir = os.path.join(root_dir, tb_run)
     pretext_dir = os.path.join(base_dir, 'pretext')
-    mkdir_if_missing(base_dir)
-    mkdir_if_missing(pretext_dir)
+
+    if make_dirs:
+        mkdir_if_missing(base_dir)
+        mkdir_if_missing(pretext_dir)
+
     cfg['pretext_dir'] = pretext_dir
     cfg['pretext_checkpoint'] = os.path.join(pretext_dir, 'checkpoint.pth.tar')
     cfg['pretext_model'] = os.path.join(pretext_dir, 'model.pth.tar')
@@ -41,11 +44,14 @@ def create_config(config_file_env, config_file_exp, tb_run):
         base_dir = os.path.join(root_dir, tb_run)
         scan_dir = os.path.join(base_dir, 'scan')
         simpred_dir = os.path.join(base_dir, 'simpred')
-        selflabel_dir = os.path.join(base_dir, 'selflabel') 
-        mkdir_if_missing(base_dir)
-        mkdir_if_missing(scan_dir)
-        mkdir_if_missing(simpred_dir)
-        mkdir_if_missing(selflabel_dir)
+        selflabel_dir = os.path.join(base_dir, 'selflabel')
+
+        if make_dirs:
+            mkdir_if_missing(base_dir)
+            mkdir_if_missing(scan_dir)
+            mkdir_if_missing(simpred_dir)
+            mkdir_if_missing(selflabel_dir)
+
         cfg['scan_dir'] = scan_dir
         cfg['scan_checkpoint'] = os.path.join(scan_dir, 'checkpoint.pth.tar')
         cfg['scan_model'] = os.path.join(scan_dir, 'model.pth.tar')
