@@ -10,7 +10,7 @@ import torch
 class MemoryBank(object):
     def __init__(self, n, dim, num_classes, temperature):
         self.n = n
-        self.dim = dim 
+        self.dim = dim
         self.features = torch.FloatTensor(self.n, self.dim)
         self.targets = torch.LongTensor(self.n)
         self.ptr = 0
@@ -30,7 +30,7 @@ class MemoryBank(object):
         retrieval_one_hot.resize_(batchSize * self.K, self.C).zero_()
         retrieval_one_hot.scatter_(1, retrieval.view(-1, 1), 1)
         yd_transform = yd.clone().div_(self.temperature).exp_()
-        probs = torch.sum(torch.mul(retrieval_one_hot.view(batchSize, -1 , self.C), 
+        probs = torch.sum(torch.mul(retrieval_one_hot.view(batchSize, -1 , self.C),
                           yd_transform.view(batchSize, -1, 1)), 1)
         _, class_preds = probs.sort(1, True)
         class_pred = class_preds[:, 0]
@@ -53,7 +53,7 @@ class MemoryBank(object):
         index = faiss.index_cpu_to_all_gpus(index)
         index.add(features)
         distances, indices = index.search(features, topk+1) # Sample itself is included
-        
+
         # evaluate 
         if calculate_accuracy:
             targets = self.targets.cpu().numpy()
@@ -61,7 +61,7 @@ class MemoryBank(object):
             anchor_targets = np.repeat(targets.reshape(-1, 1), topk, axis=1)
             accuracy = np.mean(neighbor_targets == anchor_targets)
             return indices, accuracy
-        
+
         else:
             return indices
 
@@ -72,21 +72,20 @@ class MemoryBank(object):
         sample_indices = np.random.randint(0, features.shape[0], (features.shape[0], 2))
         distances = np.linalg.norm(features[sample_indices[:, 0]] - features[sample_indices[:, 1]], axis=1)
         med = np.median(distances)
-        negative_indices = np.random.randint(0, features.shape[0], (features.shape[0], k))
 
+        negative_indices = np.zeros((features.shape[0], k), dtype=np.int32)
+        negative_okay = np.zeros(negative_indices.shape, dtype=bool)
         step = 1000
 
         for iter in range(20):
-            print(iter)
-            new_indices = np.random.randint(0, features.shape[0], (features.shape[0], k))
-            negative_okay = np.zeros((new_indices.shape), dtype=bool)
+            print(f'Starting iteration {iter}')
+            negative_indices[~negative_okay] = np.random.randint(0, features.shape[0], negative_indices[~negative_okay].shape)
 
             for i in range(0, features.shape[0], step):
-                negative_okay[i:i+step, :] = np.linalg.norm(features[i:i+step, np.newaxis, :] - features[new_indices[i:i+step, :], :], axis=2) > med
-
-            # negative_okay = np.linalg.norm(features[:, np.newaxis, :] - features[new_indices, :], axis=2) > med
-
-            negative_indices[negative_okay] = new_indices[negative_okay]
+                print(f'Step {i} of iteration {iter}')
+                f1 = self.features[i:i+step, np.newaxis, :].cuda()
+                f2 = self.features[negative_indices[i:i+step, :], :].cuda()
+                negative_okay[i:i+step, :] = torch.linalg.norm(f1 - f2, dim=2).cpu().numpy() > med
 
         # evaluate
         if calculate_accuracy:
@@ -100,13 +99,13 @@ class MemoryBank(object):
             return negative_indices
 
     def reset(self):
-        self.ptr = 0 
-        
+        self.ptr = 0
+
     def update(self, features, targets):
         b = features.size(0)
-        
+
         assert(b + self.ptr <= self.n)
-        
+
         self.features[self.ptr:self.ptr+b].copy_(features.detach())
         self.targets[self.ptr:self.ptr+b].copy_(targets.detach())
         self.ptr += b
