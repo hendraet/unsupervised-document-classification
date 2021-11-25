@@ -19,6 +19,9 @@ from utils.common_config import get_train_transformations, get_val_transformatio
 from utils.evaluate_utils import get_predictions, supervised_evaluate
 from utils.train_utils import supervised_train
 
+import torch.multiprocessing
+torch.multiprocessing.set_sharing_strategy('file_system')
+
 FLAGS = argparse.ArgumentParser(description='SCAN Loss')
 FLAGS.add_argument('--config_env', help='Location of path config file')
 FLAGS.add_argument('--config_exp', help='Location of experiments config file')
