@@ -1,0 +1,53 @@
+# setup
+setup: selflabel
+
+# Threshold
+confidence_threshold: 0.99
+
+# EMA
+use_ema: False
+
+# Loss
+criterion: confidence-cross-entropy
+criterion_kwargs:
+   apply_class_balancing: True
+
+# Model
+backbone: resnet50
+num_heads: 1
+
+# Dataset
+train_db_name: wpi_demo
+val_db_name: wpi_demo
+num_classes: 4
+
+# Transformations
+augmentation_strategy: ours 
+augmentation_kwargs:
+   crop_size: 224
+   normalize:
+      mean: [0.7608, 0.7517, 0.7362]
+      std: [0.2370, 0.2385, 0.2395]
+   num_strong_augs: 4
+   cutout_kwargs:
+     n_holes: 1
+     length: 32
+     random: True
+
+transformation_kwargs:
+   crop_size: 224
+   normalize:
+      mean: [0.7608, 0.7517, 0.7362]
+      std: [0.2370, 0.2385, 0.2395]
+
+# Hyperparameters
+optimizer: adam
+optimizer_kwargs:
+   lr: 0.0001
+   weight_decay: 0.0001
+epochs: 100
+batch_size: 1000
+num_workers: 8
+
+# Scheduler
+scheduler: constant 
