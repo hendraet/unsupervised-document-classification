@@ -8,15 +8,15 @@ import os
 import torch
 import numpy as np
 
-from utils.config import create_config
-from utils.common_config import get_model, get_train_dataset, \
+from document_classification.utils.config import create_config
+from document_classification.utils.common_config import get_model, get_train_dataset, \
                                 get_val_dataset, \
                                 get_val_dataloader, \
                                 get_val_transformations \
                                 
-from utils.memory import MemoryBank
-from utils.train_utils import simclr_train
-from utils.utils import fill_memory_bank
+from document_classification.utils.memory import MemoryBank
+from document_classification.utils.train_utils import simclr_train
+from document_classification.utils.utils import fill_memory_bank
 from termcolor import colored
 
 # Parser

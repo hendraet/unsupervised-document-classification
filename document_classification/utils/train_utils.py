@@ -5,7 +5,7 @@ Licensed under the CC BY-NC 4.0 license (https://creativecommons.org/licenses/by
 """
 import torch
 import numpy as np
-from utils.utils import AverageMeter, ProgressMeter
+from document_classification.utils.utils import AverageMeter, ProgressMeter
 
 
 def simclr_train(train_loader, model, criterion, optimizer, epoch):

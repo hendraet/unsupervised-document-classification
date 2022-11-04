@@ -4,7 +4,7 @@ This code is based on the Torchvision repository, which was licensed under the B
 from PIL import Image
 from torchvision.datasets.utils import check_integrity, download_and_extract_archive, verify_str_arg
 from torch.utils.data import Dataset
-from utils.mypath import MyPath
+from document_classification.utils.mypath import MyPath
 import os
 import numpy as np
 

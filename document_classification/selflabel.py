@@ -8,15 +8,15 @@ import os
 import torch
 from torch.utils.tensorboard import SummaryWriter
 
-from utils.config import create_config
-from utils.common_config import get_train_dataset, get_train_transformations, \
+from document_classification.utils.config import create_config
+from document_classification.utils.common_config import get_train_dataset, get_train_transformations, \
     get_val_dataset, get_val_transformations, \
     get_train_dataloader, get_val_dataloader, \
     get_optimizer, get_model, adjust_learning_rate, \
     get_criterion
-from utils.ema import EMA
-from utils.evaluate_utils import get_predictions, hungarian_evaluate
-from utils.train_utils import selflabel_train
+from document_classification.utils.ema import EMA
+from document_classification.utils.evaluate_utils import get_predictions, hungarian_evaluate
+from document_classification.utils.train_utils import selflabel_train
 from termcolor import colored
 
 # Parser

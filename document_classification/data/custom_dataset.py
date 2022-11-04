@@ -7,8 +7,8 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
-from data.imagefolderwrapper import ImageFolderWrapper
-from data.stl import STL10
+from document_classification.dataimagefolderwrapper import ImageFolderWrapper
+from document_classification.datastl import STL10
 
 """ 
     AugmentedDataset

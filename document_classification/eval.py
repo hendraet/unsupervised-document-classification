@@ -6,11 +6,11 @@ import argparse
 import torch
 import yaml
 from termcolor import colored
-from utils.common_config import get_val_dataset, get_val_transformations, get_val_dataloader, \
+from document_classification.utils.common_config import get_val_dataset, get_val_transformations, get_val_dataloader, \
     get_model
-from utils.evaluate_utils import get_predictions, hungarian_evaluate
-from utils.memory import MemoryBank
-from utils.utils import fill_memory_bank
+from document_classification.utils.evaluate_utils import get_predictions, hungarian_evaluate
+from document_classification.utils.memory import MemoryBank
+from document_classification.utils.utils import fill_memory_bank
 from PIL import Image
 
 FLAGS = argparse.ArgumentParser(description='Evaluate models from the model zoo')

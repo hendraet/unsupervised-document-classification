@@ -8,26 +8,26 @@ import math
 import numpy as np
 import torch
 import torchvision.transforms as transforms
-from data.augment import Augment, Cutout
-from utils.collate import collate_custom
-from utils.mypath import MyPath
+from document_classification.data.augment import Augment, Cutout
+from document_classification.utils.collate import collate_custom
+from document_classification.utils.mypath import MyPath
 
 
 def get_criterion(p):
     if p['criterion'] == 'simclr':
-        from losses.losses import SimCLRLoss
+        from document_classification.losses.losses import SimCLRLoss
         criterion = SimCLRLoss(**p['criterion_kwargs'])
 
     elif p['criterion'] == 'scan':
-        from losses.losses import SCANLoss
+        from document_classification.losses.losses import SCANLoss
         criterion = SCANLoss(**p['criterion_kwargs'])
 
     elif p['criterion'] == 'mcl':
-        from losses.losses import MCLLoss
+        from document_classification.losses.losses import MCLLoss
         criterion = MCLLoss()
 
     elif p['criterion'] == 'confidence-cross-entropy':
-        from losses.losses import ConfidenceBasedCE
+        from document_classification.losses.losses import ConfidenceBasedCE
         criterion = ConfidenceBasedCE(p['confidence_threshold'], p['criterion_kwargs']['apply_class_balancing'])
 
     elif p['criterion'] == 'binary-cross-entropy':
@@ -57,11 +57,11 @@ def get_model(p, pretrain_path=None, load_simpred=False):
     # Get backbone
     if p['backbone'] == 'resnet18':
         if p['train_db_name'] in ['cifar-10', 'cifar-20']:
-            from models.resnet_cifar import resnet18
+            from document_classification.models.resnet_cifar import resnet18
             backbone = resnet18()
 
         elif p['train_db_name'] == 'stl-10':
-            from models.resnet_stl import resnet18
+            from document_classification.models.resnet_stl import resnet18
             backbone = resnet18()
 
         else:
@@ -69,12 +69,12 @@ def get_model(p, pretrain_path=None, load_simpred=False):
 
     elif p['backbone'] == 'resnet50':
         if 'imagenet' in p['train_db_name']:
-            from models.resnet import resnet50
+            from document_classification.models.resnet import resnet50
             backbone = resnet50()
 
         elif p['train_db_name'] in ['impact_kb', 'impact_full_balanced', 'impact_full_imbalanced',
                                     'hdi_balanced', 'hdi_imbalanced', 'tobacco3482', 'rvl-cdip', 'wpi_demo']:
-            from models.resnet import resnet50
+            from document_classification.models.resnet import resnet50
             backbone = resnet50()
 
         else:
@@ -82,7 +82,7 @@ def get_model(p, pretrain_path=None, load_simpred=False):
 
     elif p['backbone'] == 'resnet34':
         if p['train_db_name'] in ['impact_kb', 'impact_full_balanced', 'impact_full_imbalanced']:
-            from models.resnet import resnet34
+            from document_classification.models.resnet import resnet34
             backbone = resnet34()
 
         else:
@@ -93,15 +93,15 @@ def get_model(p, pretrain_path=None, load_simpred=False):
 
     # Setup
     if p['setup'] in ['simclr', 'moco']:
-        from models.models import ContrastiveModel
+        from document_classification.models.models import ContrastiveModel
         model = ContrastiveModel(backbone, **p['model_kwargs'])
 
     elif p['setup'] == 'simpred' or load_simpred:
-        from models.models import SimpredModel
+        from document_classification.models.models import SimpredModel
         model = SimpredModel(backbone, p['hidden_dim'])
 
     elif p['setup'] in ['scan', 'selflabel']:
-        from models.models import ClusteringModel
+        from document_classification.models.models import ClusteringModel
         if p['setup'] == 'selflabel':
             assert(p['num_heads'] == 1)
         model = ClusteringModel(backbone, p['num_classes'], p['num_heads'])
@@ -154,29 +154,29 @@ def get_train_dataset(p, transform, to_augmented_dataset=False, to_neighbors_dat
                       to_similarity_dataset=False, split=None, use_negatives=False, use_simpred=False):
     # Base dataset
     if p['train_db_name'] == 'cifar-10':
-        from data.cifar import CIFAR10
+        from document_classification.data.cifar import CIFAR10
         dataset = CIFAR10(train=True, transform=transform, download=True)
 
     elif p['train_db_name'] == 'cifar-20':
-        from data.cifar import CIFAR20
+        from document_classification.data.cifar import CIFAR20
         dataset = CIFAR20(train=True, transform=transform, download=True)
 
     elif p['train_db_name'] == 'stl-10':
-        from data.stl import STL10
+        from document_classification.data.stl import STL10
         dataset = STL10(split=split, transform=transform, download=True)
 
     elif p['train_db_name'] in ['impact_kb', 'impact_full_balanced', 'impact_full_imbalanced',
                                 'hdi_balanced', 'hdi_imbalanced', 'tobacco3482', 'rvl-cdip', 'wpi_demo']:
-        from data.imagefolderwrapper import ImageFolderWrapper
+        from document_classification.data.imagefolderwrapper import ImageFolderWrapper
         root = MyPath.db_root_dir(p['train_db_name'])
         dataset = ImageFolderWrapper(root, split="train", transform=transform)
 
     elif p['train_db_name'] == 'imagenet':
-        from data.imagenet import ImageNet
+        from document_classification.data.imagenet import ImageNet
         dataset = ImageNet(split='train', transform=transform)
 
     elif p['train_db_name'] in ['imagenet_50', 'imagenet_100', 'imagenet_200']:
-        from data.imagenet import ImageNetSubset
+        from document_classification.data.imagenet import ImageNetSubset
         subset_file = './data/imagenet_subsets/%s.txt' %(p['train_db_name'])
         dataset = ImageNetSubset(subset_file=subset_file, split='train', transform=transform)
 
@@ -185,11 +185,11 @@ def get_train_dataset(p, transform, to_augmented_dataset=False, to_neighbors_dat
     
     # Wrap into other dataset (__getitem__ changes)
     if to_augmented_dataset:  # Dataset returns an image and an augmentation of that image.
-        from data.custom_dataset import AugmentedDataset
+        from document_classification.data.custom_dataset import AugmentedDataset
         dataset = AugmentedDataset(dataset)
 
     if to_neighbors_dataset:  # Dataset returns an image and one of its nearest neighbors.
-        from data.custom_dataset import NeighborsDataset
+        from document_classification.data.custom_dataset import NeighborsDataset
         knn_indices = np.load(p['topk_neighbors_train_path'])
 
         if use_negatives:
@@ -201,39 +201,38 @@ def get_train_dataset(p, transform, to_augmented_dataset=False, to_neighbors_dat
 
         dataset = NeighborsDataset(dataset, knn_indices, kfn_indices, use_simpred, p['num_neighbors'], num_negatives)
     elif to_similarity_dataset:  # Dataset returns an image and another random image.
-        from data.custom_dataset import SimilarityDataset
+        from document_classification.data.custom_dataset import SimilarityDataset
         dataset = SimilarityDataset(dataset)
     
     return dataset
-
 
 def get_val_dataset(p, transform=None, to_neighbors_dataset=False, to_similarity_dataset=False,
                     use_negatives=False, use_simpred=False):
     # Base dataset
     if p['val_db_name'] == 'cifar-10':
-        from data.cifar import CIFAR10
+        from document_classification.data.cifar import CIFAR10
         dataset = CIFAR10(train=False, transform=transform, download=True)
     
     elif p['val_db_name'] == 'cifar-20':
-        from data.cifar import CIFAR20
+        from document_classification.data.cifar import CIFAR20
         dataset = CIFAR20(train=False, transform=transform, download=True)
 
     elif p['val_db_name'] == 'stl-10':
-        from data.stl import STL10
+        from document_classification.data.stl import STL10
         dataset = STL10(split='test', transform=transform, download=True)
 
     elif p['train_db_name'] in ['impact_kb', 'impact_full_balanced', 'impact_full_imbalanced',
                                 'hdi_balanced', 'hdi_imbalanced', 'tobacco3482', 'rvl-cdip', 'wpi_demo']:
-        from data.imagefolderwrapper import ImageFolderWrapper
+        from document_classification.data.imagefolderwrapper import ImageFolderWrapper
         root = MyPath.db_root_dir(p['train_db_name'])
         dataset = ImageFolderWrapper(root, split="test", transform=transform)
     
     elif p['val_db_name'] == 'imagenet':
-        from data.imagenet import ImageNet
+        from document_classification.data.imagenet import ImageNet
         dataset = ImageNet(split='val', transform=transform)
     
     elif p['val_db_name'] in ['imagenet_50', 'imagenet_100', 'imagenet_200']:
-        from data.imagenet import ImageNetSubset
+        from document_classification.data.imagenet import ImageNetSubset
         subset_file = './data/imagenet_subsets/%s.txt' %(p['val_db_name'])
         dataset = ImageNetSubset(subset_file=subset_file, split='val', transform=transform)
     
@@ -242,7 +241,7 @@ def get_val_dataset(p, transform=None, to_neighbors_dataset=False, to_similarity
     
     # Wrap into other dataset (__getitem__ changes) 
     if to_neighbors_dataset: # Dataset returns an image and one of its nearest neighbors.
-        from data.custom_dataset import NeighborsDataset
+        from document_classification.data.custom_dataset import NeighborsDataset
         knn_indices = np.load(p['topk_neighbors_val_path'])
 
         if use_negatives:
@@ -252,7 +251,7 @@ def get_val_dataset(p, transform=None, to_neighbors_dataset=False, to_similarity
 
         dataset = NeighborsDataset(dataset, knn_indices, kfn_indices, use_simpred, 5, 5) # Only use 5
     elif to_similarity_dataset:  # Dataset returns an image and another random image.
-        from data.custom_dataset import SimilarityDataset
+        from document_classification.data.custom_dataset import SimilarityDataset
         dataset = SimilarityDataset(dataset)
 
     return dataset

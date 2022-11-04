@@ -5,7 +5,7 @@ Licensed under the CC BY-NC 4.0 license (https://creativecommons.org/licenses/by
 import os
 import yaml
 from easydict import EasyDict
-from utils.utils import mkdir_if_missing
+from document_classification.utils.utils import mkdir_if_missing
 
 
 def create_config(config_file_env, config_file_exp, tb_run, make_dirs=True):

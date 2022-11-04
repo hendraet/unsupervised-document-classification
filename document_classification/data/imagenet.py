@@ -7,7 +7,7 @@ import torch
 import torchvision.datasets as datasets
 import torch.utils.data as data
 from PIL import Image
-from utils.mypath import MyPath
+from document_classification.utils.mypath import MyPath
 from torchvision import transforms as tf
 from glob import glob
 
