@@ -2,7 +2,7 @@ from pathlib import Path
 
 import setuptools
 
-requirements_file = Path(__file__).resolve().parent / 'document_classification' / 'requirements.txt'
+requirements_file = Path(__file__).resolve().parent / 'requirements.txt'
 requirements = [requirement.strip() for requirement in requirements_file.open().readlines()]
 
 setuptools.setup(
