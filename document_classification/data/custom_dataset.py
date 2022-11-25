@@ -5,10 +5,9 @@ Licensed under the CC BY-NC 4.0 license (https://creativecommons.org/licenses/by
 """
 import numpy as np
 import torch
-from torch.utils.data import Dataset
-
 from document_classification.dataimagefolderwrapper import ImageFolderWrapper
 from document_classification.datastl import STL10
+from torch.utils.data import Dataset
 
 """ 
     AugmentedDataset

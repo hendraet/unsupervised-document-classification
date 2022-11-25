@@ -1,12 +1,14 @@
 """
 This code is based on the Torchvision repository, which was licensed under the BSD 3-Clause.
 """
-from PIL import Image
-from torchvision.datasets.utils import check_integrity, download_and_extract_archive, verify_str_arg
-from torch.utils.data import Dataset
-from document_classification.utils.mypath import MyPath
 import os
+
 import numpy as np
+from PIL import Image
+from torch.utils.data import Dataset
+from torchvision.datasets.utils import check_integrity, download_and_extract_archive, verify_str_arg
+
+from document_classification.utils.mypath import MyPath
 
 
 class STL10(Dataset):

@@ -4,12 +4,13 @@ This code is based on the Torchvision repository, which was licensed under the B
 import os
 import pickle
 import sys
+
 import numpy as np
-import torch
 from PIL import Image
 from torch.utils.data import Dataset
-from document_classification.utils.mypath import MyPath
 from torchvision.datasets.utils import check_integrity, download_and_extract_archive
+
+from document_classification.utils.mypath import MyPath
 
 
 class CIFAR10(Dataset):

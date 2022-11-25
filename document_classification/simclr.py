@@ -5,20 +5,21 @@ Licensed under the CC BY-NC 4.0 license (https://creativecommons.org/licenses/by
 """
 import argparse
 import os
-import torch
-import numpy as np
 
-from document_classification.utils.config import create_config
+import numpy as np
+import torch
+from termcolor import colored
+
 from document_classification.utils.common_config import get_criterion, get_model, get_train_dataset, \
     get_val_dataset, get_train_dataloader, \
     get_val_dataloader, get_train_transformations, \
     get_val_transformations, get_optimizer, \
     adjust_learning_rate
+from document_classification.utils.config import create_config
 from document_classification.utils.evaluate_utils import contrastive_evaluate
 from document_classification.utils.memory import MemoryBank
 from document_classification.utils.train_utils import simclr_train
 from document_classification.utils.utils import fill_memory_bank
-from termcolor import colored
 
 # Parser
 parser = argparse.ArgumentParser(description='SimCLR')

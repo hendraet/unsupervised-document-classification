@@ -8,12 +8,12 @@ requirements = [requirement.strip() for requirement in requirements_file.open().
 setuptools.setup(
     name="document-classification",
     version="1.0",
-    author="",  # TODO:
-    author_email="",  # TODO
-    description="",  # TODO
+    author="",
+    author_email="",
+    description="",
     packages=setuptools.find_packages(),
     install_requires=requirements,
-    classifiers=[  # TODO
+    classifiers=[
         "Development Status :: 1 - Planning",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",

@@ -5,19 +5,20 @@ Licensed under the CC BY-NC 4.0 license (https://creativecommons.org/licenses/by
 """
 import argparse
 import os
+
 import torch
+from termcolor import colored
 from torch.utils.tensorboard import SummaryWriter
 
-from document_classification.utils.config import create_config
 from document_classification.utils.common_config import get_train_dataset, get_train_transformations, \
     get_val_dataset, get_val_transformations, \
     get_train_dataloader, get_val_dataloader, \
     get_optimizer, get_model, adjust_learning_rate, \
     get_criterion
+from document_classification.utils.config import create_config
 from document_classification.utils.ema import EMA
 from document_classification.utils.evaluate_utils import get_predictions, hungarian_evaluate
 from document_classification.utils.train_utils import selflabel_train
-from termcolor import colored
 
 # Parser
 parser = argparse.ArgumentParser(description='Self-labeling')

@@ -3,15 +3,17 @@ Authors: Wouter Van Gansbeke, Simon Vandenhende
 Licensed under the CC BY-NC 4.0 license (https://creativecommons.org/licenses/by-nc/4.0/)
 """
 import argparse
+
 import torch
 import yaml
+from PIL import Image
 from termcolor import colored
+
 from document_classification.utils.common_config import get_val_dataset, get_val_transformations, get_val_dataloader, \
     get_model
 from document_classification.utils.evaluate_utils import get_predictions, hungarian_evaluate
 from document_classification.utils.memory import MemoryBank
 from document_classification.utils.utils import fill_memory_bank
-from PIL import Image
 
 FLAGS = argparse.ArgumentParser(description='Evaluate models from the model zoo')
 FLAGS.add_argument('--config_exp', help='Location of config file')

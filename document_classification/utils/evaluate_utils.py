@@ -6,12 +6,13 @@ Licensed under the CC BY-NC 4.0 license (https://creativecommons.org/licenses/by
 import numpy as np
 import torch
 import torch.nn.functional as F
+from document_classification.datacustom_dataset import NeighborsDataset
+from scipy.optimize import linear_sum_assignment
+from sklearn import metrics
+
+from document_classification.losses.losses import entropy
 from document_classification.utils.common_config import get_feature_dimensions_backbone
 from document_classification.utils.utils import AverageMeter, confusion_matrix
-from document_classification.datacustom_dataset import NeighborsDataset
-from sklearn import metrics
-from scipy.optimize import linear_sum_assignment
-from document_classification.losses.losses import entropy, xentropy
 
 
 @torch.no_grad()

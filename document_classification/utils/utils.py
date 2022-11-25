@@ -3,10 +3,11 @@ Authors: Wouter Van Gansbeke, Simon Vandenhende
 Modified by Jona Otholt
 Licensed under the CC BY-NC 4.0 license (https://creativecommons.org/licenses/by-nc/4.0/)
 """
-import os
-import torch
-import numpy as np
 import errno
+import os
+
+import numpy as np
+import torch
 
 
 def mkdir_if_missing(directory):

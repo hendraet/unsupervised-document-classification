@@ -3,13 +3,14 @@ Author: Wouter Van Gansbeke, Simon Vandenhende
 Licensed under the CC BY-NC 4.0 license (https://creativecommons.org/licenses/by-nc/4.0/)
 """
 import os
-import torch
-import torchvision.datasets as datasets
-import torch.utils.data as data
-from PIL import Image
-from document_classification.utils.mypath import MyPath
-from torchvision import transforms as tf
 from glob import glob
+
+import torch.utils.data as data
+import torchvision.datasets as datasets
+from PIL import Image
+from torchvision import transforms as tf
+
+from document_classification.utils.mypath import MyPath
 
 
 class ImageNet(datasets.ImageFolder):

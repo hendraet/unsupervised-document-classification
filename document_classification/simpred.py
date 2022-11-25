@@ -5,21 +5,21 @@ Licensed under the CC BY-NC 4.0 license (https://creativecommons.org/licenses/by
 """
 import argparse
 import os
-import torch
 
+import torch
+import torch.multiprocessing
 from termcolor import colored
 from torch.utils.tensorboard import SummaryWriter
 
-from document_classification.utils.config import create_config
 from document_classification.utils.common_config import get_train_transformations, get_val_transformations, \
     get_train_dataset, get_train_dataloader, \
     get_val_dataset, get_val_dataloader, \
     get_optimizer, get_model, get_criterion, \
     adjust_learning_rate
+from document_classification.utils.config import create_config
 from document_classification.utils.evaluate_utils import get_predictions, simpred_evaluate
 from document_classification.utils.train_utils import simpred_train
 
-import torch.multiprocessing
 torch.multiprocessing.set_sharing_strategy('file_system')
 
 FLAGS = argparse.ArgumentParser(description='Similarity prediction')

@@ -3,11 +3,13 @@ Authors: Wouter Van Gansbeke, Simon Vandenhende
 Modified by Jona Otholt
 Licensed under the CC BY-NC 4.0 license (https://creativecommons.org/licenses/by-nc/4.0/)
 """
-import os
 import math
+import os
+
 import numpy as np
 import torch
 import torchvision.transforms as transforms
+
 from document_classification.data.augment import Augment, Cutout
 from document_classification.utils.collate import collate_custom
 from document_classification.utils.mypath import MyPath
